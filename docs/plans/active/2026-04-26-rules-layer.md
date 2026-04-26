@@ -106,3 +106,32 @@ Implementer agent (Sonnet) applied GATE 2 code-reviewer findings.
 - `rules/_meta/rule-template.md` — Fix 7: moved tag vocabulary to inline comment on `applies-to:` line in frontmatter; removed duplicate list from bottom Notes section.
 - `rules/core/secrets-and-pii.md` — Fix 8: split rule 2 into 2a (PII never at INFO/DEBUG) and 2b (WARNING/ERROR minimum-identifier + pipeline redaction).
 - `CLAUDE.md` — Fix 9: corrected typo "destilled" → "distilled".
+
+---
+
+## Round 3 — 2026-04-26
+
+Implementer agent (Sonnet) added substep 4b to `skills/batuta-project-hygiene/SKILL.md`.
+
+### (a) User-settings sync
+
+Operator manually synced both CLAUDE.md files (global `~/.claude/CLAUDE.md` and plugin root `CLAUDE.md`) outside of this agent round. No automated changes were made to those files in Round 3.
+
+### (b) New substep 4b — Engineering invariants bootstrap
+
+Inserted after existing substep 4a ("Cross-tool bootstrap") in `Mode: project-init`:
+
+- Prompts operator to bootstrap engineering invariants from batuta-agent-skills (default Y).
+- On Y: runs `setup-rules.sh --all` via `find`-based plugin path resolution, appends `## Engineering invariants` section with three `@.claude/rules/` imports to `CLAUDE.md`, and appends `.claude/rules/` to `.gitignore`.
+- On n: skips silently with reminder of manual invocation path.
+- Verification: `test -L .claude/rules/research-first-citations.md` + `grep -q "@.claude/rules/" CLAUDE.md`.
+
+Updated `## Verification / After project-init` block with three opt-in checks:
+- symlink exists (`test -L .claude/rules/research-first-citations.md`)
+- invariants import present in CLAUDE.md
+- `.claude/rules/` is gitignored
+
+### (c) Other
+
+- Final line count: 448 lines (was 426). Within the ≤500 soft limit.
+- YAML frontmatter unchanged; `name` and `description` fields intact.
