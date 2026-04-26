@@ -42,3 +42,21 @@ This constraint is self-contradictory: the file was already 292 lines before any
 - YAML frontmatter: VALID (name + description present, description = 198 chars)
 - Line count: 372
 - Mode: feature-init: untouched (verified by inspection)
+
+## Round 2 follow-up: cross-tool bootstrap
+
+**Date:** 2026-04-25
+**Agent:** implementer (Sonnet)
+
+Added substep **4a ("Cross-tool bootstrap (optional)")** at the end of `project-init` step 4. The substep is auto-executed for projects with a manifest file (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`), skippable via operator opt-out. Two files are bootstrapped (idempotent — skipped if already present):
+
+1. `AGENTS.md` (≤ 30 lines) at project root — minimal cross-tool orientation doc pointing to docs/. Includes Rule #0 link, doc-graph table, and project overview placeholder. Does NOT duplicate CLAUDE.md content.
+2. `.aider.conf.yml` (≤ 15 lines) — `read:` block listing AGENTS.md, docs/PRD.md, docs/SPEC.md, docs/plans/active/. Created by default; skippable for pure-docs repos or operator opt-out.
+
+Explicitly excluded: `.cursor/rules/`, `GEMINI.md`, `.windsurfrules` — operator opts into those per-tool.
+
+Step 6 (Verification) and the bottom `## Verification / After project-init` block both updated with `test -f AGENTS.md` and `test -f .aider.conf.yml || echo skipped` checks.
+
+**Line count:** 372 → 422
+**YAML frontmatter:** VALID (unchanged)
+**Staged:** `skills/batuta-project-hygiene/SKILL.md` only
