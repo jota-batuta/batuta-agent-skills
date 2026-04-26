@@ -1,6 +1,6 @@
 ---
 name: batuta-project-hygiene
-description: Use at session start when cwd has no CLAUDE.md, and ALWAYS before creating any SPEC.md or feature-scoped CLAUDE.md. Feature SPEC.md and CLAUDE.md NEVER go at project root - they go inside src/feature/, packages/feature/, app/feature/, or features/feature/. Two modes - project-init, feature-init.
+description: Bootstraps CLAUDE.md, doc skeleton (PRD/SPEC/ADR/plans/sessions), and GitHub repo. Use at session start or before SPEC.md/feature CLAUDE.md. Feature files NEVER at root. project-init | feature-init.
 ---
 
 # Batuta Project Hygiene
@@ -137,18 +137,96 @@ Do NOT trigger:
    - `## Mandatory Skills for Batuta Projects` — copy verbatim from this plugin's root `CLAUDE.md`.
    - `## Feature folder convention` — **placeholder**, filled in on first `feature-init` invocation (see Mode: feature-init step 1).
 
-4. **GitHub boilerplate** (per user-level CLAUDE.md rule "New project = GitHub repo on day 0"):
+4. **Create project documentation skeleton** (skip any file that already exists):
+
+   ```bash
+   mkdir -p docs/adr docs/plans/active docs/plans/archive docs/sessions
+   touch docs/plans/active/.gitkeep docs/plans/archive/.gitkeep docs/sessions/.gitkeep
+   ```
+
+   `docs/PRD.md` — vision anchor (start with this skeleton; expand to ~70 lines as Vision/Constraints/Roadmap become real):
+   ```markdown
+   # PRD — <project-name>
+
+   ## Problem
+   <TODO: fill in>
+
+   ## Vision
+   <TODO: fill in>
+
+   ## Users
+   <TODO: fill in>
+
+   ## Success metrics
+   | Metric | Baseline | Target |
+   |---|---|---|
+   | <TODO> | — | — |
+
+   ## Non-goals
+   <TODO: fill in>
+
+   ## Constraints
+   <TODO: fill in>
+   ```
+
+   `docs/SPEC.md` — architecture anchor (start with this skeleton; grow to ~150 lines as components stabilize):
+   ```markdown
+   # SPEC — <project-name>
+
+   ## Component map
+   <!-- TODO: paste block diagram here -->
+
+   ## Architecture summary
+   <TODO: one paragraph>
+
+   ## Cross-cutting constraints
+   - <TODO: bullet per constraint>
+
+   ---
+   *See also: [PRD](PRD.md) · [ADRs](adr/)*
+   ```
+
+   `docs/adr/0001-template-decision.md` — ADR format reference (≤40 lines):
+   ```markdown
+   # ADR 0001 — Template Decision
+
+   **Status:** Template
+   **Date:** YYYY-MM-DD
+   **Deciders:** <names>
+
+   ## Context
+   Rename this file to `NNNN-<your-title>.md` when you write your first real ADR.
+   Describe the situation and the forces at play.
+
+   ## Decision
+   State the chosen option.
+
+   ## Alternatives considered
+   | Option | Rejected because |
+   |---|---|
+   | Option A | <reason> |
+
+   ## Consequences
+   Positive: …
+   Negative: …
+   ```
+
+5. **GitHub boilerplate** (per user-level CLAUDE.md rule "New project = GitHub repo on day 0"):
    - If no `.git/` exists: `git init && git add CLAUDE.md && git commit -m "chore: initial project hygiene"`
    - If no remote: ask operator `"Crear repo GitHub <jota-batuta/<detected-name>>? (y/n)"`. On `y`: `gh repo create jota-batuta/<name> --private --source=. --remote=origin --push`.
 
-5. **Verification**:
+6. **Verification**:
    - `./CLAUDE.md` exists and contains `## Mandatory Skills for Batuta Projects`
+   - `test -f docs/PRD.md && test -f docs/SPEC.md && test -f docs/adr/0001-template-decision.md`
+   - `test -d docs/plans/active && test -d docs/plans/archive && test -d docs/sessions`
    - `git log -1 --oneline` shows the hygiene commit
    - `git remote get-url origin` returns a URL (if GitHub step ran)
 
 ### Mode: `feature-init <name>`
 
 **Hard constraint before any step**: the feature's `SPEC.md` and `CLAUDE.md` MUST be created inside a subfolder, NEVER at the project root. If the upstream `/spec` command would write to root, override its target. The root is reserved for project-wide files only.
+
+**Input precondition**: `<name>` MUST match the regex `^[a-z0-9][a-z0-9-]{0,40}$` (kebab-case, ≤ 41 chars, no shell metacharacters). This is enforced before any shell command runs. If the operator-supplied or upstream-derived name does not match, REJECT with a re-prompt for a valid kebab-case name. Do NOT attempt to sanitize. Same constraint applies to `<detected-name>` derived in `project-init` when used in `gh repo create jota-batuta/<detected-name>`.
 
 1. **Read `./CLAUDE.md` `## Feature folder convention` section**:
    - If it records `style: layered` → target is always `docs/features/<name>/`. No auto-detection. Skip to step 2.
@@ -265,10 +343,15 @@ Do NOT trigger:
 
 After `project-init`:
 ```bash
-test -f CLAUDE.md                           # exists
-grep -q "Mandatory Skills for Batuta" CLAUDE.md   # Batuta section present
-grep -q "Feature folder convention" CLAUDE.md     # placeholder present
-git log --oneline -1 | grep -q "project hygiene"  # committed
+test -f CLAUDE.md                                          # exists
+grep -q "Mandatory Skills for Batuta" CLAUDE.md            # Batuta section present
+grep -q "Feature folder convention" CLAUDE.md              # placeholder present
+test -f docs/PRD.md                                        # PRD skeleton created
+test -f docs/SPEC.md                                       # SPEC skeleton created
+test -f docs/adr/0001-template-decision.md                 # ADR template created
+test -d docs/plans/active && test -d docs/plans/archive    # plans dirs exist
+test -d docs/sessions                                      # sessions dir exists
+git log --oneline -1 | grep -q "project hygiene"           # committed
 ```
 
 After `feature-init <name>` (feature-oriented):
