@@ -20,6 +20,7 @@ cases=(
   "06-delegation-guard-killswitch.sh"
   "07-code-graph-skill-shape.sh"
   "08-code-graph-helpers-behavior.sh"
+  "09-audit-chain-graph-integration.sh"
 )
 
 pass=0
