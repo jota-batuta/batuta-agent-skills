@@ -16,6 +16,11 @@
 # Source: https://github.com/DeusData/codebase-memory-mcp (verified 2026-04-29, codebase-memory-mcp@0.6.0)
 # Source: https://code.claude.com/docs/en/mcp (verified 2026-04-29, claude mcp add semantics)
 
+# NOTE on `set -uo pipefail` (no `-e`): this script tracks per-engine status
+# (graphify and codebase-memory-mcp) and intentionally continues on partial failure
+# so the operator gets the most-functional configuration possible. Replacing with
+# `set -euo pipefail` would abort the second engine install whenever the first
+# fails — exactly the opposite of what we want for a fallback architecture.
 set -uo pipefail
 
 if (( BASH_VERSINFO[0] < 4 )); then
@@ -198,11 +203,25 @@ install_cbm() {
       fi
       rm -f "$tmp_ps1"
     else
+      # Download to temp file first, then execute. Avoids piping a streamed remote
+      # script directly into bash (which leaves no audit trail and is harder to
+      # interrupt mid-stream if the operator's network blips). Mirrors the Windows
+      # path above. The file is deleted in all cases via trap.
+      local tmp_sh
+      tmp_sh="$(mktemp 2>/dev/null || mktemp -t cbm-install)"
+      trap 'rm -f "$tmp_sh"' RETURN
       if ! curl -fsSL \
         "https://raw.githubusercontent.com/DeusData/codebase-memory-mcp/main/install.sh" \
-        | bash -s -- --skip-config; then
+        -o "$tmp_sh"; then
+        err "failed to download install.sh"
+        rm -f "$tmp_sh"
+        CBM_STATUS="MISSING"
+        return
+      fi
+      if ! bash "$tmp_sh" --skip-config; then
         rc=$?
       fi
+      rm -f "$tmp_sh"
     fi
 
     if (( rc != 0 )); then

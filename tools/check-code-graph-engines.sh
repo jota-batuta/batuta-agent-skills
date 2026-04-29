@@ -17,6 +17,10 @@
 #
 # Source: https://github.com/jota-batuta/batuta-agent-skills (this plugin)
 
+# NOTE on `set -uo pipefail` (no `-e`): this is a read-only status reporter and
+# its caller (the skill's Step 0) interprets non-zero exit as "no engine available"
+# rather than as a script error. Aborting on the first missing field would prevent
+# the caller from distinguishing legitimate "MISSING" states from genuine failures.
 set -uo pipefail
 
 STATE_FILE="$HOME/.claude/code-graph-engines.json"
