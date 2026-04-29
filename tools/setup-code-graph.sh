@@ -297,12 +297,13 @@ install_cbm() {
     log "✓ SHA-256 match: $actual"
 
     # v3.1 hardening — gh attestation verify against the release's
-    # provenance bundle. SHA-256 verification (above) proves the asset
-    # matches the value listed in checksums.txt of the same release;
-    # attestation verify proves both the asset AND checksums.txt were
-    # produced by the expected GitHub Actions workflow in the expected
-    # repo (defense in depth against a maintainer-account compromise
-    # that re-publishes both the asset and its hash with new content).
+    # provenance bundle. Gate 3 of 3 (release pin → SHA-256 → attestation).
+    # SHA-256 verification (above) proves the asset matches the value listed
+    # in checksums.txt of the same release; attestation verify proves both
+    # the asset AND checksums.txt were produced by the expected GitHub Actions
+    # workflow in the expected repo (defense in depth against a maintainer-
+    # account compromise that re-publishes both the asset and its hash with
+    # new content).
     # Source: https://docs.github.com/en/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds (verified 2026-04-29)
     # Source: gh attestation verify --help (gh 2.87.3, verified 2026-04-29)
     if have gh; then

@@ -184,8 +184,13 @@ Specifically for v3.1:
 2. **`gh` installed but not authenticated** — bootstrap warns, continues with SHA-256-only. Suggested remediation: `gh auth login`.
 3. **`gh attestation verify` returns non-zero** — bootstrap **hard-aborts**. This is NOT a graceful-degrade case — a failed attestation is positive evidence of tampering, not absence of evidence. CBM_STATUS=BROKEN, no install.
 
+### Transient-error policy (intentional, security-relevant)
+
+`gh attestation verify` non-zero is treated as a hard-abort regardless of cause. Network blips, Sigstore rate-limits, GitHub API outages, DNS resolution failures — all funnel into `CBM_STATUS=BROKEN`. This is intentional: any graceful path on verify-failure would be the exact bypass an attacker would force (e.g., DNS-poisoning Sigstore endpoints to error-out, then exploiting the fallback). The two graceful-degrade cases (gh missing, gh unauthenticated) are categorically different — they are *absence of evidence*, not failed evidence. Operators encountering transient errors retry the bootstrap; that friction is acceptable in exchange for closing the bypass.
+
 ### Future hardening (still open)
 
+- **Offline-bundle verification** for air-gapped operator workstations. `gh attestation verify --bundle <path>` accepts a pre-downloaded `.bundle` file and verifies without contacting Sigstore at run time. Deferred — none of Batuta's current operators run air-gapped; revisit if a regulated client requires it.
 - Pin the verification to a specific signer workflow (`--signer-workflow .github/workflows/release.yml@refs/tags/v0.6.0`) for paranoid binding to a specific release path. Deferred — requires inspecting upstream's release workflow to confirm the path is stable.
 - SBOM verification against `sbom.json` (the release ships one). The attestation verify already covers integrity; SBOM gives audit-trail value but does not directly close additional attack surface. Deferred unless an audit requirement (client) motivates it.
 - PyPI hash-pinning for graphifyy. See PRD; postponed.
