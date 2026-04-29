@@ -58,6 +58,10 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
+      # raven-actions/actionlint is a wrapper around the canonical
+      # rhysd/actionlint binary; chosen for the PR-annotation UX. SHA pin makes
+      # the trust decision a one-time review (see audit chain v3.4 GATE 3).
+      # Migrate to rhysd's own action if/when one ships.
       - uses: raven-actions/actionlint@205b530c5d9fa8f44ae9ed59f341a0db994aa6f8 # v2.1.2
 
   # -------------------------------------------------------------------------
@@ -97,7 +101,9 @@ jobs:
   e2e:
     name: E2E harness (claude --model sonnet, 4 scenarios)
     runs-on: ubuntu-latest
-    needs: static-validators  # don't burn tokens on a tree the static suite already rejected
+    # Don't burn API tokens on a tree where YAML or contracts are broken.
+    # Both gates (actionlint, static-validators) must pass first.
+    needs: [actionlint, static-validators]
     timeout-minutes: 15
 
     steps:
