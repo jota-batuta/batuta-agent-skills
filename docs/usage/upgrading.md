@@ -79,7 +79,7 @@ When the override is active, every `gh pr merge` invocation logs a stderr line t
 pr-merge-guard: 'gh pr merge' allowed by BATUTA_ALLOW_PR_MERGE=1
 ```
 
-The log makes the auth visible in audit chains and session journals. See [ADR-0010](../adr/0010-pr-merge-guard-env-var-opt-in.md) for the design rationale and three rejected alternatives.
+The log makes the auth visible in audit chains and session journals. See [ADR-0010](../adr/0010-pr-merge-guard-env-var-opt-in.md) for the design rationale and five rejected alternatives (sentinel file, chat authorization, slash command, pre-commit hook, `permissions.deny`).
 
 ## What changes in your environment when you upgrade
 
