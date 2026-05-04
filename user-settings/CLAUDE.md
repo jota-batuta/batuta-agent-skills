@@ -99,7 +99,11 @@ The context window is not memory. The Obsidian vault is.
 
 ## Claude Code boundaries
 
-- Use sub-agents (Task tool) for any work that touches many files or requires research. Keep the main session's context budget under 50% utilization.
+- **Use sub-agents (Task tool) by specificity, not as fallback** — when work touches many files or needs research:
+  - **Pick the model deliberately**: Haiku for mechanical scopes (exact-keyword search, file lookups, README surveys, ≤ 3-file mechanical edits, fixture-only tests); Sonnet for analysis, multi-step investigation, implementation with control flow / tests / async, audit-chain steps (`code-reviewer`, `security-auditor`, `test-engineer`). **Never delegate to Opus subagents** — that defeats the cost savings. Opus stays in main for orchestration, intent-capture, routing, and synthesis only.
+  - **Brief the subagent self-contained**: include the goal, the relevant file paths, the question or scope, and the answer format (length cap, table vs. prose vs. diff). The subagent has zero session context — write the prompt like briefing a smart colleague who just walked into the room.
+  - **Domain expertise → invoke `agent-architect` FIRST** to create or reuse a project-local specialist at `<project>/.claude/agents/<name>.md`. Never inline domain prompts at the call site; formalize as a reusable specialist so the next slice can also pick it up. Discovery-first against project-local + user-global + plugin agents to avoid duplicates.
+  - Goal: save Opus tokens, keep main context under 50% utilization, and give each subagent its own clean context window.
 - Never block the main session waiting for a long-running process. Use `run_in_background: true` on Bash.
 - For deploys, prefer local `docker compose` first; cloud after local is proven,
 - For payments, auth secrets, and PII: never commit to the repo, never log in plaintext.
