@@ -1,260 +1,109 @@
 # User-level rules (jota-batuta)
 
-These rules apply to every Claude Code session, on every project, regardless of per-project CLAUDE.md. Project CLAUDE.md can add or narrow scope but must not contradict these.
+Cross-project agent behavior. Project CLAUDE.md may narrow scope but cannot contradict.
 
-## Research-first (non-negotiable)
+## Language
 
-Before writing code that uses any external library, API, or service:
-
-0. **Vault lookup** — before going external, check the Obsidian vault for existing decisions/gotchas on the same topic. If a curated L2 entry exists with `last_verified` < 4 months, it supersedes external lookup. This leverages past research instead of repeating it. Delegated to `research-first-dev` Step 1.5.
-1. Context7 lookup for the exact version in the project's dependency manifest.
-2. If Context7 has no coverage or the version is outdated, web search against the official documentation domain or the library's GitHub repository.
-3. Add a source-citation comment at the import site: `// Source: <url> (verified YYYY-MM-DD, <lib>@<version>)`.
-
-Research is cheap, rework is expensive. Trust is not a substitute for verification. This is enforced by the `research-first-dev` skill from `batuta-agent-skills`.
-
-## Divergent then convergent thinking
-
-For any non-trivial decision (architecture, data model, flow, stack choice):
-
-1. **Diverge** — list at least three viable approaches. Include the one that looks obviously right. Do not collapse early.
-2. **Converge** — pick one, and for each alternative state the concrete reason it was rejected (cost, complexity, scope, risk). Quantify when possible.
-3. Record the decision as an ADR or a bullet in the project's session notes.
-
-Stopping at the first workable idea is the most common failure mode. Force the divergent step even when you think you know.
-
-## Commit after every change
-
-After every meaningful change:
-
-1. `git status` + `git diff` — confirm scope matches intent.
-2. `git add <specific files>` — never `git add -A` unless the repo is a fresh scaffold.
-3. `git commit` with a message that explains the *why*, not only the *what*.
-
-Never leave uncommitted work at the end of a session. A 10-line dirty tree tomorrow is 2 hours of re-understanding.
-
-## New project = GitHub repo on day 0
-
-If you start a new project:
-
-1. `gh repo create jota-batuta/<name> --private` (or `--public` if it is an open-source artifact like a plugin fork).
-2. `git init` + `git remote add origin <url>` + first commit + `git push -u origin main` before writing any feature code.
-3. Open a draft PR for the first feature branch immediately. Work on the branch, push often.
-
-A project that lives only on your disk is a project that will never ship. The GitHub repo is the real project.
-
-## PR policy (always create, never merge)
-
-1. Every change goes through a PR — no direct pushes to `main` or `master`.
-2. Claude creates PRs via `gh pr create`. Claude never merges PRs.
-3. The operator (jota-batuta) merges manually after review.
-4. Commits must not include `Co-Authored-By: Claude` or any AI attribution.
-
-## Language policy
-
-- Conversations with the operator: Spanish.
+- Conversations with operator: Spanish.
 - Artifacts (code, README, SKILL.md, commit messages, PR descriptions, ADRs, tests): English.
-- User-facing guides intended for Spanish-speaking clients: Spanish.
+- Client-facing user guides may be Spanish if the project CLAUDE.md states so.
 
-One exception to the artifact rule: `docs/` aimed at internal team members may be Spanish if explicitly stated in the project CLAUDE.md.
+## Research before code
 
-## Authoring gates (skill + agent)
+- Vault L2 lookup first (Obsidian) — if a curated entry exists with `last_verified` < 4 months, it supersedes external lookup.
+- Otherwise, Context7 for the exact version in the manifest.
+- Fallback: web search on official documentation domain or library GitHub.
+- Add `// Source: <url> (verified YYYY-MM-DD, <lib>@<version>)` at the import site.
 
-Two gates enforce that no `SKILL.md` or `agents/*.md` file is created in the `batuta-agent-skills` plugin without prior validation. Both gates are runtime-enforced by `PreToolUse` hooks (v3.8) — they bind the main agent and any subagent except where documented.
+Trust is not a substitute for verification. Enforced by `research-first-dev`.
 
-**Skill authoring gate (MUST-A)**:
+## Divergent then convergent
 
-- Before any `Write`/`Edit` that creates a new `**/skills/**/SKILL.md` in the plugin repo, invoke `batuta-skill-authoring` and complete its workflow end-to-end. The skill leaves a marker `.claude/.authoring-marker-skill-<ISO>` valid for 60 minutes. The hook `pre-write-skill-gate.sh` blocks the Write without a fresh marker.
-- Bypass: `BATUTA_SKILL_AUTHORING_BYPASS=1` (operator-side env var). Cannot be set from inside an agent's tool call. Use only for cosmetic edits during rebases.
-- Editing an existing SKILL.md is unrestricted.
-- Full rule: `~/.claude/plugins/marketplaces/batuta-agent-skills/rules/authoring/skill-authoring-required.md`.
+For any non-trivial decision (architecture, data model, flow, stack):
 
-**Agent authoring gate (MUST-B)**:
+1. List ≥3 viable approaches; include the obviously-right one. Do not collapse early.
+2. Pick one; for each rejected alternative state the concrete reason (cost, complexity, scope, risk).
+3. Record as ADR or session note.
 
-- Before any `Write`/`Edit` that creates a new `**/agents/**.md` (plugin-shipped at `agents/` OR project-local at `<project>/.claude/agents/`), invoke `batuta-agent-authoring` (plugin-shipped) or `agent-architect` (project-local specialists). Both leave the marker `.claude/.authoring-marker-agent-<ISO>` valid for 60 minutes. The hook `pre-write-agent-gate.sh` blocks the Write without a fresh marker.
-- Bypass: `BATUTA_AGENT_AUTHORING_BYPASS=1`. Cannot be set from inside an agent.
-- Editing an existing agent file is unrestricted.
-- Full rule: `~/.claude/plugins/marketplaces/batuta-agent-skills/rules/authoring/agent-authoring-required.md`.
+## Git
 
-**Why these gates exist**: a `MUST trigger X` declared only in CLAUDE.md text is not enforcement — the agent that has Write access can violate it, and during the v3.8 plan-mode session the main agent did exactly that (proposed new skills without invoking `batuta-skill-authoring`). The runtime hook + marker workflow is the only mechanism that converts the MUST into a real gate.
+- Commit after every meaningful change. Never end a session with a dirty tree.
+- New project: `gh repo create` and first commit before any feature code. The repo is the project.
+- Every change → PR. Claude opens, operator merges. No `Co-Authored-By: Claude`.
+- `git add <specific files>`, never `-A` outside fresh scaffolds.
 
-## Obsidian KB as durable memory (ADR-0012, supersedes Notion KB workflow)
+## Authoring gates
 
-Per ADR-0012 in `batuta-agent-skills`, Obsidian is the single source of truth for the KB. Notion is deprecated for internal Batuta use (kept only when a client needs read access). The vault lives at `~/.claude/kb-vault.json` → `vault_root` (machine-wide config), structured as `<vault>/clients/<slug>/projects/<slug>/{sessions,sprints,decisions,gotchas,tasks}/` plus shared `<vault>/{decisions,gotchas,playbooks,glossary,_inbox,templates}/`.
+Before creating any of the following files, the agent MUST invoke the corresponding skill, which writes a marker authorizing the file creation. PreToolUse hooks block the Write without a fresh marker.
 
-**Automatic at session start**: `hooks/session-start.sh` reads `<project>/.claude/kb-config.json` and injects client metadata, project status, last 3 vault sessions, and the active plan into the main agent's context. No manual command needed. If the config is missing, `batuta-project-hygiene mode=project-init` triggers and presents a numbered menu of existing clients from the vault before asking for a new one.
+| Path | Skill |
+|---|---|
+| `**/skills/**/SKILL.md` (plugin) | `batuta-skill-authoring` |
+| `**/agents/**.md` (plugin) | `batuta-agent-authoring` |
+| `<project>/.claude/agents/**.md` | `agent-architect` |
+| `**/rules/**.md` (plugin) | `batuta-rule-authoring` |
 
-**Automatic per commit**: `hooks/post-commit-kb.sh` writes a journal bullet to `docs/sessions/` and mirrors it to the vault. Two opt-in flags in `.claude/kb-config.json` (default `false`):
+Editing existing files in those paths is unrestricted. Bypass via the corresponding `BATUTA_*_BYPASS=1` env var on the launching shell. Mechanism details in `rules/authoring/`.
 
-- `adr_mirror_enabled: true` → ADRs touched by the commit are copied to `<vault>/decisions/adr-NNNN-<slug>.md` with Obsidian frontmatter, idempotent via `source_hash`.
-- `kb_pipeline_enabled: true` → dispatches the `kb-pipeline` agent in background (`nohup timeout 120 claude --print ... & disown`); the agent runs Capture / Curate / Write phases against the commit diff and writes to vault L2 (decisions / gotchas / playbooks) or `_inbox/` (rejected / pending).
+## Intent capture (every operator turn)
 
-**Manual when needed**: `/kb-curate` for batch L1→L2 promotion of accumulated journal bullets (still useful for backlog drain). `/kb-end-session` closes the project journal.
+Before any `Edit`/`Write`/`Bash` tool call:
 
-**Removed in v4.0 (ADR-0013)**: the `notion-kb-workflow` skill directory was deleted from the plugin. Function is covered by `hooks/session-start.sh` + `hooks/post-commit-kb.sh` + the `kb-pipeline` agent (when `.claude/kb-config.json` has `kb_pipeline_enabled: true`). The original SKILL.md remains in git history if needed.
+1. Detect: action request / continuation / read-only question.
+2. Action → grill (one Q per turn) → capture JSON intent → present → wait for explicit operator confirmation ("dale", "procedé", "sí, go ahead").
+3. On confirm → dual-write: `<project>/.claude/.intent-confirmed-<ISO>` marker AND `<project>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` versioned record.
+4. Declare routing (subagent X vs main-direct, with reason per file or scope) → wait for operator approval.
+5. Execute.
 
-**Wikilink invariant**: Every file written to the vault must include inline `[[wikilinks]]` for client, project, technology, and cross-KB references. Every file must have a `related:` frontmatter field (YAML list of wikilinks). This is the sole mechanism connecting notes in the Obsidian graph — without wikilinks, entries are invisible to `research-first-dev` Step 1.5 and to the graph view. Convention defined in `batuta-kb-vault` SKILL.md Step 3.5.
+A UserPromptSubmit hook auto-injects this on every operator turn. Subagents bypass via `agent_id`. Bypass: `BATUTA_INTENT_BYPASS=1` on the launching shell. Mechanism in `rules/core/intent-capture-required.md`.
+
+## Delegation
+
+Delegation is the default for implementation; main retains orchestration.
+
+- **Lookups, multi-file search, WebFetch, README surveys (>3 queries about a single topic)** → `Explore` or `general-purpose` (Sonnet). Single short read that feeds the very next tool call: main may do it directly.
+- **Implementation in client code** → `implementer-haiku` (≤3 files, mechanical, no new control flow / tests / async) or `implementer` (control flow, tests, async, integrations, multi-module).
+- **Domain expertise** → invoke `agent-architect` to create or reuse a project-local specialist at `<project>/.claude/agents/`. Discovery-first against project-local + user-global + plugin agents.
+- **Main retains**: orchestration, intent grilling, routing decisions, synthesis, plugin meta-work (plans, memory entries, ADRs, rules, this CLAUDE.md).
+
+Never delegate to Opus subagents (defeats cost). Subagents inherit confirmed intent.
+
+After any staged diff, the audit chain runs unconditionally: `test-engineer` → `code-reviewer` → `security-auditor`. Each step reads `git diff`; NOT-APPLICABLE returns immediately on a clean tree.
+
+After exiting plan mode, run `/save-plan <slug>` so the plan persists at `<project>/docs/plans/active/<YYYY-MM-DD>-<slug>.md`.
+
+## Project hygiene (auto)
+
+At session start, `batuta-project-hygiene` auto-invokes:
+
+- `mode=project-init` when project markers exist (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `.git/`) but `CLAUDE.md` does not.
+- `mode=project-retrofit` (silent) when `CLAUDE.md` exists but `docs/PRD.md` / `docs/SPEC.md` / `docs/plans/active/` / `docs/sessions/` / `.claude/kb-config.json` are missing.
+- `mode=feature-init <name>` when the operator describes a new feature or slice.
+
+**Feature files NEVER at project root.** Project structure determines placement: feature-oriented (`src|packages|app|crates/<feature>/`) or layered (`docs/features/<feature>/` for Django/Rails/FastAPI/Temporal where moving code would break worker registration). Detection logic and the full path tree live in the skill.
+
+Scoped feature `CLAUDE.md` is ≤60 lines and only contains rules unique to the feature — does not restate user-level or project-level rules (Claude Code's nested loading inherits them).
+
+## Obsidian KB
+
+The vault is the single source of truth. Path resolved via `~/.claude/kb-vault.json` → `vault_root`.
+
+- Per-session: `hooks/session-start.sh` injects client metadata, project status, last 3 sessions, active plan into context.
+- Per-commit: `hooks/post-commit-kb.sh` writes a journal bullet and (when `.claude/kb-config.json` opts in) dispatches the `kb-pipeline` agent to curate.
+- Manual: `/kb-curate` for batch L1→L2 promotion, `/kb-end-session` to close the session journal.
+
+**Wikilink invariant**: every vault file must include inline `[[wikilinks]]` and a `related:` frontmatter list. Without them the graph view and `research-first-dev` Step 1.5 cannot find the entry.
 
 The context window is not memory. The Obsidian vault is.
 
-## Claude Code boundaries
+## Plugin rules
 
-- **Use sub-agents (Task tool) by specificity, not as fallback** — when work touches many files or needs research:
-  - **Pick the model deliberately**: Haiku for mechanical scopes (exact-keyword search, file lookups, README surveys, ≤ 3-file mechanical edits, fixture-only tests); Sonnet for analysis, multi-step investigation, implementation with control flow / tests / async, audit-chain steps (`code-reviewer`, `security-auditor`, `test-engineer`). **Never delegate to Opus subagents** — that defeats the cost savings. Opus stays in main for orchestration, intent-capture, routing, and synthesis only.
-  - **Brief the subagent self-contained**: include the goal, the relevant file paths, the question or scope, and the answer format (length cap, table vs. prose vs. diff). The subagent has zero session context — write the prompt like briefing a smart colleague who just walked into the room.
-  - **Domain expertise → invoke `agent-architect` FIRST** to create or reuse a project-local specialist at `<project>/.claude/agents/<name>.md`. Never inline domain prompts at the call site; formalize as a reusable specialist so the next slice can also pick it up. Discovery-first against project-local + user-global + plugin agents to avoid duplicates.
-  - Goal: save Opus tokens, keep main context under 50% utilization, and give each subagent its own clean context window.
-- Never block the main session waiting for a long-running process. Use `run_in_background: true` on Bash.
-- For deploys, prefer local `docker compose` first; cloud after local is proven,
-- For payments, auth secrets, and PII: never commit to the repo, never log in plaintext.
-- Never expose secrets or keys to GitHub.
+Engineering invariants ship in `batuta-agent-skills/rules/`. A project imports them à la carte from its CLAUDE.md via `@.claude/rules/<rule>.md`. The symlinks are created by `tools/setup-rules.sh` (run once per project, idempotent), point at the plugin install path, and update on `/plugin update`. Add `.claude/rules/` to project `.gitignore` (per-machine, breaks on clones without the plugin).
 
-## Autonomous project hygiene
+## Boundaries
 
-At the start of any session, before writing or editing files:
-
-1. Invoke `batuta-project-hygiene mode=project-init` if:
-   - `./CLAUDE.md` does NOT exist, AND
-   - `./` contains at least one of: `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, or a `.git/` directory.
-
-2. Invoke `batuta-project-hygiene mode=project-retrofit` (silently, no announcement) if:
-   - `./CLAUDE.md` EXISTS, AND
-   - ANY of these is missing: `docs/PRD.md`, `docs/SPEC.md`, `docs/plans/active/`, `docs/sessions/`, `.claude/kb-config.json`.
-
-Both are fully autonomous — proceed without asking the operator for confirmation on steps 4a/4b/4c. Slug inference handles the KB config automatically (see skill). The operator does not need to type a command or answer Y/n.
-
-Before starting work on a new feature — when the operator describes a new feature, capability, or slice — invoke `batuta-project-hygiene` with `mode=feature-init <name>`. The skill handles folder convention, scoped CLAUDE.md, and SPEC.md placement. Do not create CLAUDE.md or feature folders manually in these two cases — delegate to the skill.
-
-Before delegating implementation work on an existing project — when the implementer returns a BLOCKER citing missing doc skeleton (`docs/plans/active/` or `specs/current/` not present) — invoke `batuta-project-hygiene` with `mode=project-retrofit`. The mode is purely additive: it completes what is missing without overwriting what exists.
-
-### Feature files NEVER go at project root
-
-A project can have one feature or many. Every feature gets its own subfolder under the project's features root (`src/`, `packages/`, `app/`, or `features/` — whichever the project uses). Both `SPEC.md` and `CLAUDE.md` for a feature MUST be created inside that feature's subfolder, NEVER at the project root.
-
-Required layout (project with N features):
-
-```
-<project-root>/
-├── CLAUDE.md                ← project-wide rules (one file, shared by all features)
-├── <manifest>               ← pyproject.toml / package.json / Cargo.toml / go.mod
-└── src/                     ← features root (or packages/, app/, features/, crates/)
-    ├── feature-one/
-    │   ├── CLAUDE.md        ← scoped to feature-one
-    │   ├── SPEC.md          ← scoped to feature-one
-    │   ├── tasks/           ← task breakdown for feature-one
-    │   └── <source files>
-    ├── feature-two/
-    │   ├── CLAUDE.md
-    │   ├── SPEC.md
-    │   └── <source files>
-    └── feature-three/
-        ├── CLAUDE.md
-        ├── SPEC.md
-        └── <source files>
-```
-
-### Decisión previa — ¿el código está organizado por feature o por capa técnica?
-
-Antes de elegir el features root, inspeccioná la estructura existente:
-
-- **Por feature** (vertical slices): cada subfolder bajo `src/`, `packages/`, `app/` contiene un módulo completo de negocio (modelo + vista + lógica + tests). Típico en Next.js App Router, monorepos JS/TS, Rust workspaces.
-  → Usá el árbol de auto-detección normal (`src/<feature>/`, `packages/<feature>/`, etc.).
-
-- **Por capa técnica** (horizontal layers): los subfolders son `models/`, `views/`, `services/`, `activities/`, `reports/`, `tools/`. Típico en Django, Rails, Temporal workers, FastAPI apps con separación clásica.
-  → **NO muevas código.** Los features viven documentalmente en `docs/features/<feature>/` con su `CLAUDE.md`, `SPEC.md`, `PRD.md`. El CLAUDE.md de cada feature lista qué archivos de las capas técnicas la implementan (mapa feature→código).
-
-**Por qué**: forzar un refactor a `src/<feature>/` en proyectos monolito-por-capa rompe imports, tests y registros de worker/router con riesgo desproporcionado al beneficio. La documentación vive en `docs/` de forma honesta; el código queda donde está.
-
-**Regla de bolsillo**: si mover código requeriría un PR de >20 archivos solo para reubicar, estás en el caso "por capa" → `docs/features/`.
-
-Hard rules:
-
-1. **NEVER** create `SPEC.md` at the project root. Specs are scoped to features — they live in `src/<feature>/`, `packages/<feature>/`, `app/<feature>/`, or `crates/<feature>/` (feature-oriented projects), or in `docs/features/<feature>/` (layer-oriented projects — Django, Rails, FastAPI, Temporal).
-2. **NEVER** overwrite an existing project-level `CLAUDE.md` during `feature-init`. Project-wide and feature-scoped CLAUDE.md are separate files at different levels.
-3. If the upstream `/spec` command from `agent-skills` would write to root, redirect its target to the feature subfolder. The upstream default is wrong for multi-feature projects — override.
-4. Auto-detect the features root from the project structure before asking the operator:
-   - **Layered project** (subpaquetes bajo `src/` son `models/`, `views/`, `services/`, `activities/`, `reports/`, `tools/`, etc.) → `docs/features/<feature>/` (docs-only; el código queda en su capa original)
-   - `pyproject.toml` with `src/` directory and feature-named subpackages → `src/<feature>/`
-   - `package.json` with `packages/` → `packages/<feature>/`
-   - Next.js App Router (`app/` directory) → `app/<feature>/`
-   - `Cargo.toml` with `[workspace]` → `crates/<feature>/`
-   - Fallback → `features/<feature>/`
-
-   Persist the chosen convention in the project-level `CLAUDE.md` under `## Feature folder convention` with explicit `style:` (`feature-oriented` or `layered`) and `features-root:` fields, so future features don't re-ask.
-5. Scoped `CLAUDE.md` must be short (≤ 60 lines) and only contain rules unique to the feature: scope, boundaries, patterns. Do NOT restate user-level or project-level rules — those inherit automatically through Claude Code's nested CLAUDE.md loading.
-
-This prevents the monorepo-spaghetti failure mode where every feature dumps a `SPEC.md` at root and no one can tell which spec belongs to which piece of code.
-
-## Native delegation + post-edit audit
-
-Delegation is the **default**, not the exception. Main Opus orchestrates, grills, routes, and edits plugin meta-work — it does NOT implement. Full details in `rules/model-routing.md` (imported by setup-rules.sh).
-
-**(a) Lookups and research** — `gh repo view|api`, `WebFetch`, multi-file explorations (> 3 queries), README surveys: delegate to `Agent(subagent_type="Explore")` or `general-purpose` (Sonnet). Exception: a single `gh`/`Read`/`Grep` < 30 lines that directly feeds the next tool call in the same turn (latency > cost).
-
-**Cumulative-scope clarification (added 2026-05-04 after PR #45-#47 incident)**: count queries by the **topic being researched**, not per individual tool call. The "single < 30 lines" exception is for ONE lookup that feeds the very next tool call — NOT for a chain of sequential lookups about the same topic. Before the **second** related grep/Read on the same question, switch to a delegation: `Agent(subagent_type="Explore", prompt="<self-contained question>")` and ask for a written report. If unsure whether the investigation will need >3 queries, default to delegating — latency cost of spawning a subagent is small; cost of polluting main context is large. Plugin meta-work allowed direct from main per rule (c) below covers **writing** the fix (editing plugin.json, ADRs, etc.), NOT the **research** that precedes it.
-
-**(b) Implementation in client project code → ALWAYS a subagent, NEVER main directly**:
-- `implementer-haiku` (Haiku) when: ≤ 3 files, no new control-flow, no async, no new error handling, mechanical scope (renames, CSS, strings, README/CHANGELOG, config flips, fixture-only tests). The `<client-project>` hardcode cleanup (12 literals, small module) is the canonical Haiku case.
-- `implementer` (Sonnet) when: control flow, tests with assertions, integrations, async, error handling, or multi-module refactor.
-- Specialist via `agent-architect` when: domain expertise (regulations, client-specific protocols, frameworks) that base agents don't cover.
-
-**(c) Main Opus retains**: orchestration, intent-capture grilling, routing decisions, synthesis of subagent output, and direct edits to plugin meta-work (plan files, memory entries, ADRs, rules, this CLAUDE.md). These are the kill-switch paths — documented in `docs/DELEGATION-RULE.md`.
-
-**Post-edit audit chain** (always runs when there's a staged diff):
-
-```
-implementer | implementer-haiku | <specialist> | <main edits> → test-engineer → code-reviewer → security-auditor
-```
-
-The chain is sequential and each gate reads `git diff`. NOT-APPLICABLE returns immediately on a clean tree. The chain applies regardless of who produced the diff — the main agent or a subagent.
-
-**Hard kill-switches** (plugin-enforced, not negotiable):
-
-- `.claude/settings*.json`, `.claude/hooks/*`, `.claude/agents/*`
-- `.env`, `.env.*`, `secrets/*`
-
-Everything else: Claude's native judgment. Direct edits from the main are allowed on all other paths.
-
-If the slice needs domain expertise the base agents don't cover, invoke `agent-architect` FIRST to create or reuse a project-local specialist at `<project>/.claude/agents/<name>.md`. Discovery-first against project-local + user-global + plugin agents to avoid duplicates.
-
-See plugin `batuta-agent-skills/docs/DELEGATION-RULE.md` for the full contract, `docs/DELEGATION-RULE-SPECIALISTS.md` for the task-complexity calibration table, and `docs/adr/0006-trust-native-delegation.md` for the v2.7 realignment rationale.
-
-**After exiting plan mode**, run `/save-plan <slug>` (added in v2.6) to copy the plan from `~/.claude/plans/<auto-name>.md` to `<project>/docs/plans/active/<YYYY-MM-DD>-<slug>.md`. Plan mode's default location is user-global ephemera; the project-local plan is canonical and travels with the code via git. The implementer pre-flight check rejects any slice whose plan is not at the project-local path — there is no improvising. ADR-0005 documents why this is a slash command rather than a runtime hook (the `ExitPlanMode` tool does not expose the plan file path, making automatic detection fragile).
-
-**For projects that already have CLAUDE.md but lack `docs/PRD.md`, `docs/SPEC.md`, `docs/plans/active/`, or related skeleton**: `mode=project-retrofit` runs automatically at session start (see Autonomous project hygiene above). No manual invocation needed — the auto-trigger handles it silently.
-
-## Intent capture (pre-execution gate)
-
-Before executing any work described by the operator, the main agent MUST formalize intent — always, with no message-count heuristic. One bullet or ten: the gate fires. Skill: `intent-capture` (auto-invoked by description match).
-
-- **Detect**: any operator message requesting concrete action (imperative verb, file/repo/config change). Exemptions: read-only questions ("¿qué hace X?", "explain Y"), simple confirmations to an already-emitted intent ("dale", "sí", "procedé"), and corrections to an intent in progress (they extend the existing batch, not a new capture cycle).
-- **Grill** (one question per turn, wait for answer): probe scope, ambiguity, constraints, rejected alternatives, and acceptance criteria — until `text` + `scope` + `acceptance` are unambiguous. If the agent can answer a question by reading code or vault docs, it does so instead of asking (cites the evidence). Stopping criterion: all three fields clear.
-- **Capture + confirm**: produce a JSON object conformant to `skills/intent-capture/references/intent-schema.json` (JSON Schema 2020-12). Present it to the operator, ask "¿es todo?". On "sí, procedé" set `status: confirmed`. Only then unblock execution.
-- **Route**: confirmed `category: "research"` → subagent Sonnet (see `rules/model-routing.md`). `category: "feature|bug|refactor"` → `implementer-haiku` or `implementer` per scope. `category: "meta"` (plugin files) → main-direct OK.
-
-## Engineering invariants from `rules/` (batuta-agent-skills)
-
-The plugin ships a `rules/` layer with declarative engineering invariants that any project can import à la carte: research-first citations, secrets/PII handling, code style, and (over time) stack-specific and Colombia-specific patterns. Imports keep the project's own `CLAUDE.md` short — universal conventions live in plugin-provided modules, not copied per project.
-
-**For a NEW project**: the `batuta-project-hygiene` skill (`mode=project-init`) auto-bootstraps the rule symlinks as part of its flow — automatically, no prompt. It runs `tools/setup-rules.sh --all` and pre-populates the project's `CLAUDE.md` with `@.claude/rules/<rule>.md` import lines.
-
-**For an EXISTING project** that did not run hygiene at init time: invoke `batuta-project-hygiene` again, OR run manually:
-
-```bash
-bash ~/.claude/plugins/marketplaces/batuta-agent-skills/tools/setup-rules.sh --all
-```
-
-Then add `@.claude/rules/<rule>.md` lines to the project's `CLAUDE.md` (one per imported rule). On the next Claude Code session start the rules load automatically into context.
-
-**Updates** propagate via `/plugin update batuta-agent-skills` — the symlinks point at the plugin install path, so rule contents update on each plugin pull. New rules added to the plugin require re-running the setup script (idempotent).
-
-**Add `.claude/rules/` to your project `.gitignore`** — symlinks are per-machine and break on clones without the plugin installed.
-
-See plugin `batuta-agent-skills/rules/_meta/how-to-import.md` for the full consumer protocol, exception protocol when a rule does not apply, and troubleshooting.
-
-New rules shipped in v3.9 — add to any project that uses the plugin:
-
-```
-@.claude/rules/no-hardcoded-magic.md
-@.claude/rules/model-routing.md
-```
+- Use subagents by specificity, not as fallback. Goal: keep main context under 50% utilization.
+- Never block the main session waiting on long-running processes — `run_in_background: true` on Bash.
+- Local `docker compose` first; cloud after local is proven.
+- Secrets, auth keys, PII: never in the repo, never in plaintext logs, never in client-side code or static build artifacts.
+- Operator help: `/help`. Feedback: github.com/anthropics/claude-code/issues.
