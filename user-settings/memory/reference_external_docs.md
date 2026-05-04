@@ -41,7 +41,7 @@ Per-project automation (gated by `.claude/kb-config.json` flags, default `false`
 
 Cross-machine sync: vault is a private git repo (`jota-batuta/batuta-kb`). On Windows, `.git/` lives outside Google Drive sync via `git init --separate-git-dir` to avoid Drive thrashing on `.git/objects/`.
 
-**Deprecated**: `notion-kb-workflow` (frozen 2026-05-01). Notion KB content was migrated to `<vault>/glossary/domains/` on 2026-04-30 (40 entries from the "Batuta Knowledge Base" Notion DB).
+**Removed in v4.0 (2026-05-04, ADR-0013)**: the `notion-kb-workflow` skill directory was deleted from the plugin. Replaced operationally by `hooks/session-start.sh` + `hooks/post-commit-kb.sh` + the `kb-pipeline` agent. The earlier Notion KB content (40 entries from the "Batuta Knowledge Base" Notion DB) was migrated to `<vault>/glossary/domains/` on 2026-04-30 prior to removal.
 
 ## When to consult these
 
