@@ -97,7 +97,7 @@ Key behaviors:
 - **Research-first vault lookup**: the `research-first-dev` skill checks the vault for prior decisions before reaching for external docs.
 - **Wikilinks and frontmatter**: all vault entries carry Obsidian-compatible frontmatter and use `[[wikilinks]]` for cross-references.
 
-Notion is deprecated for internal use (kept only when a client needs read access). The old `notion-kb-workflow` skill is frozen.
+Notion is deprecated for internal use (kept only when a client needs read access). The old `notion-kb-workflow` skill was removed in v4.0 (ADR-0013); its SKILL.md is preserved in git history.
 
 ### Engineering invariants (rules/)
 
@@ -105,12 +105,7 @@ The `rules/` layer ships declarative invariants that consumer projects import vi
 
 ### Code knowledge graph
 
-Architecture and dependency questions are answered from a persisted graph, not by re-reading files every time. The `code-graph` skill supports two engines:
-
-- **graphify** (primary) -- multimodal, processes docs and images alongside code.
-- **codebase-memory-mcp** (fallback) -- code-only, stable on Windows.
-
-Engine selection is automatic based on `~/.claude/code-graph-engines.json`. Bootstrap both with `tools/setup-code-graph.sh`. See [ADR-0007](docs/adr/0007-code-graph-dual-engine.md).
+Architecture and dependency questions are answered from a persisted graph, not by re-reading files every time. The `code-graph` skill is backed by a single engine: **codebase-memory-mcp** (Go MCP server, code-only, stable on Linux/macOS/Windows). State lives at `~/.claude/code-graph-engines.json`. Bootstrap with `tools/setup-code-graph.sh`. See [ADR-0007](docs/adr/0007-code-graph-dual-engine.md) for the original dual-engine design and [ADR-0013](docs/adr/0013-v4.0-distillation.md) for the v4.0 single-engine simplification (graphify deprecated).
 
 ## Full skill inventory (36 skills)
 
@@ -160,7 +155,7 @@ Most have mandatory triggers documented in [`CLAUDE.md`](CLAUDE.md) so they fire
 | `kb-end-session` | End of productive session | Close session journal, commit, trigger `/kb-curate --scope session` |
 | `save-plan` | After exiting plan mode | Copy plan from `~/.claude/plans/` to `docs/plans/active/` for git persistence |
 | `batuta-status` | When operator wants cross-project overview | Snapshot of all active Batuta projects from vault + git state |
-| ~~`notion-kb-workflow`~~ | **DEPRECATED** ([ADR-0012](docs/adr/0012-obsidian-only-kb-pipeline.md)) | Frozen. Replaced by vault hooks + kb-pipeline agent. Do not invoke |
+| ~~`notion-kb-workflow`~~ | **REMOVED** in v4.0 ([ADR-0013](docs/adr/0013-v4.0-distillation.md), supersedes [ADR-0012](docs/adr/0012-obsidian-only-kb-pipeline.md)) | Directory deleted; replaced by vault hooks + kb-pipeline agent. SKILL.md in git history if needed |
 
 ### Vendored -- upstream copies in skills/_vendored/ (2 skills)
 

@@ -77,7 +77,7 @@ Conventions:
 
 ### `integrations/` — Contracts for plugin-coordinated external tools
 
-- [`code-graph-usage.md`](integrations/code-graph-usage.md) — when and how to use the dual-engine code knowledge graph (graphify + codebase-memory-mcp)
+- [`code-graph-usage.md`](integrations/code-graph-usage.md) — when and how to use the code knowledge graph (codebase-memory-mcp; graphify deprecated in v4.0)
 
 ### `domain-co/` — Colombia-specific conventions
 
@@ -96,6 +96,18 @@ Always invoke the **`batuta-rule-authoring`** skill before adding a new file und
 - §A.6 — admission gate: rule has demonstrably applied in ≥ 2 distinct projects without exceptions, OR the rule is a verbatim derivation from `~/.claude/CLAUDE.md` (which counts as universal)
 
 The skill blocks creation if the gate is not satisfied. See [`../skills/batuta-rule-authoring/SKILL.md`](../skills/batuta-rule-authoring/SKILL.md) for the full contract and [`_meta/rule-template.md`](_meta/rule-template.md) for the empty canonical format.
+
+### Rule frontmatter fields
+
+| Field | Required | Values | Purpose |
+|---|---|---|---|
+| `title` | yes | string | Human-readable rule name. |
+| `applies-to` | yes | YAML list of tags | Languages, stacks, or contexts the rule covers. Used for `@import` filtering. |
+| `last-reviewed` | yes | `YYYY-MM-DD` | Quarterly review cadence; rules untouched for >12 months enter `needs-review`. |
+| `enforcement` | yes (since v4.0) | `context-only` \| `hook` | Declares whether the rule is enforced at runtime by a `PreToolUse` hook (`hook`) or only loaded into agent context as guidance (`context-only`). |
+| `hook` | conditional | path under `hooks/` | Required when `enforcement: hook`. Points at the script that gates the rule's surface. |
+
+The `enforcement` field is honest signaling for consumers: a rule labeled `context-only` is advisory in practice (caught at code-review time, not at tool-call time), while a rule labeled `hook` is gated by the runtime and a violating tool call will be blocked. Without this field, every rule could read like a hard guarantee even when only two of them actually were — the v4.0 distillation closed this gap (ADR-0013).
 
 ## Consuming rules in a project
 
