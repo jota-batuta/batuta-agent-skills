@@ -1,6 +1,6 @@
 # Batuta Agent Skills
 
-A Claude Code plugin that gives AI coding agents structured engineering workflows, automated quality gates, and durable project memory. Forked from [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) and extended with delegation, audit enforcement, a knowledge pipeline backed by an Obsidian vault, and a dual-engine code knowledge graph. See [`docs/SPEC.md`](docs/SPEC.md) for the full architecture.
+A Claude Code plugin that gives AI coding agents structured engineering workflows, automated quality gates, and durable project memory. Forked from [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) and extended with delegation, audit enforcement, a knowledge pipeline backed by an Obsidian vault, and a code knowledge graph backed by codebase-memory-mcp. See [`docs/SPEC.md`](docs/SPEC.md) for the full architecture.
 
 Read these in order to understand the project:
 
@@ -30,7 +30,7 @@ claude --plugin-dir /path/to/batuta-agent-skills
 
 After installing, the plugin's PreToolUse hook is active in every session where the plugin is enabled. It blocks **only** the kill-switch paths listed above; for all other paths Claude uses its native delegation judgment. The post-edit audit chain (test → review → security) runs on every staged diff regardless of authorship. See [`docs/DELEGATION-RULE.md`](docs/DELEGATION-RULE.md) for the full contract.
 
-For the dual-engine code-graph (architecture / onboarding / refactor questions), run the one-time-per-machine bootstrap:
+For the code-graph (architecture / onboarding / refactor questions), run the one-time-per-machine bootstrap:
 
 ```bash
 bash ~/.claude/plugins/marketplaces/batuta-agent-skills/tools/setup-code-graph.sh
@@ -148,7 +148,7 @@ Most have mandatory triggers documented in [`CLAUDE.md`](CLAUDE.md) so they fire
 | `batuta-agent-authoring` | Before any new `agents/<name>.md` | Distinctness check against existing agents, tool-minimality |
 | `batuta-rule-authoring` | Before any new file under `rules/` | Validates canonical format, conventions, N=2 admission gate |
 | `research-first-dev` | Before code that imports any uncited external dependency | Context7 lookup, web-search fallback, `// Source:` citation at import site |
-| `code-graph` | Architecture/dependency questions or session start on >5k-LOC repo | Dual-engine code knowledge graph. Four modes: `--scan`, `--watch`, `--mcp`, `--query` |
+| `code-graph` | Architecture/dependency questions or session start on >5k-LOC repo | Code knowledge graph (codebase-memory-mcp). Four modes: `--scan`, `--watch`, `--mcp`, `--query` |
 | `batuta-kb-vault` | When bootstrapping or operating the Obsidian vault | Defines L0-L3 vault structure, frontmatter contracts, tagging, inbox drain |
 | `kb-curate` | PR-merge / `/kb-curate` / weekly cron / session end | Promotes journal bullets (L1) to curated decisions, gotchas, playbooks (L2/L3) |
 | `kb-backfill` | One-shot on legacy repos | 4-phase extraction: README/CHANGELOG, commits, GitHub issues+PRs, code analysis |
