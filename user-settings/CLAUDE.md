@@ -187,6 +187,8 @@ Delegation is the **default**, not the exception. Main Opus orchestrates, grills
 
 **(a) Lookups and research** — `gh repo view|api`, `WebFetch`, multi-file explorations (> 3 queries), README surveys: delegate to `Agent(subagent_type="Explore")` or `general-purpose` (Sonnet). Exception: a single `gh`/`Read`/`Grep` < 30 lines that directly feeds the next tool call in the same turn (latency > cost).
 
+**Cumulative-scope clarification (added 2026-05-04 after PR #45-#47 incident)**: count queries by the **topic being researched**, not per individual tool call. The "single < 30 lines" exception is for ONE lookup that feeds the very next tool call — NOT for a chain of sequential lookups about the same topic. Before the **second** related grep/Read on the same question, switch to a delegation: `Agent(subagent_type="Explore", prompt="<self-contained question>")` and ask for a written report. If unsure whether the investigation will need >3 queries, default to delegating — latency cost of spawning a subagent is small; cost of polluting main context is large. Plugin meta-work allowed direct from main per rule (c) below covers **writing** the fix (editing plugin.json, ADRs, etc.), NOT the **research** that precedes it.
+
 **(b) Implementation in client project code → ALWAYS a subagent, NEVER main directly**:
 - `implementer-haiku` (Haiku) when: ≤ 3 files, no new control-flow, no async, no new error handling, mechanical scope (renames, CSS, strings, README/CHANGELOG, config flips, fixture-only tests). The `<client-project>` hardcode cleanup (12 literals, small module) is the canonical Haiku case.
 - `implementer` (Sonnet) when: control flow, tests with assertions, integrations, async, error handling, or multi-module refactor.
