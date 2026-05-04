@@ -67,14 +67,16 @@ Rationale: most bugs come from assuming outdated APIs. Context7 lookup is cheap,
 ### intent-capture (enforced)
 **MUST trigger** on any operator message that requests concrete action (imperative verb, file/repo/config change, feature description, bug report, refactor ask). The gate formalizes intent before execution: grill → capture → confirm → route.
 
-**Enforcement (v4.2)**: enforced at runtime by two hooks working together:
+**Enforcement (v4.3)**: enforced at runtime by two hooks plus an explicit declaration protocol and a persistence requirement. Four layers:
 
-- `hooks/pre-edit-intent-gate.sh` (PreToolUse for `Write`/`Edit`/`MultiEdit`/`NotebookEdit` AND `Bash`): blocks the tool call unless a marker file `.claude/.intent-confirmed-<ISO>` exists in the project's `.claude/` directory. The marker is written by `intent-capture` Step 5 on operator confirmation. **The gate now applies to ALL Bash tool calls** — no allow-list of read-only commands. For genuinely trivial reads, the operator uses `BATUTA_INTENT_BYPASS=1`.
-- `hooks/clear-intent-marker.sh` (UserPromptSubmit): deletes all `.intent-confirmed-*` markers at the start of every operator turn. There is no time-based window — the marker is valid only until the next prompt arrives.
+1. **Auto-injection** (`hooks/clear-intent-marker.sh`, UserPromptSubmit) — emits a system-reminder via `hookSpecificOutput.additionalContext` on every operator turn that authoritatively triggers `intent-capture`. The agent does not rely on its own pattern-matching of operator words. Moves enforcement from "reactive block" (hook fires when tool is attempted without marker) to "proactive instruction" (agent receives explicit direction before any tool call). The same hook also deletes `.intent-confirmed-*` markers at the turn boundary.
+2. **Reactive blocking** (`hooks/pre-edit-intent-gate.sh`, PreToolUse for `Write`/`Edit`/`MultiEdit`/`NotebookEdit` AND `Bash`) — blocks tool calls unless a marker `.claude/.intent-confirmed-<ISO>` exists. The gate applies to ALL Bash tool calls (no allow-list). For genuinely trivial reads, operators use `BATUTA_INTENT_BYPASS=1`.
+3. **Routing declaration protocol** (Rule 7 of `rules/core/intent-capture-required.md`) — before any tool call, the agent MUST declare to the operator whether it will use subagents (which ones, why) or main-direct, and wait for approval. Closes the discretion gap that auto-injection alone cannot.
+4. **Intent persistence** (Rule 8) — Step 5 of intent-capture writes BOTH the marker AND a versioned record at `docs/intents/<YYYY-MM-DD>-<id>-<slug>.md`. Confirmed intents are first-class development artifacts; marker-only is insufficient.
 
 Exempt paths for Edit/Write (no marker required): `.claude/**`, `docs/**`, `**/CLAUDE.md`, `**/MEMORY.md`, `memory/**`, `.gitignore`, `README.md`, `LICENSE*`, `plugin.json`, `ATTRIBUTION.md`, `CHANGELOG.md`. Bash has no exempt list. Subagents bypass the gate via `agent_id` (they inherit the confirmed intent from their briefing). Full rule: [`rules/core/intent-capture-required.md`](rules/core/intent-capture-required.md).
 
-Rationale: v4.1 had two gaps — Bash was unsegmented, and the 60-minute marker window let multiple operator turns share one confirmation. v4.2 closes both: per-turn invalidation forces a fresh grill on every operator turn, and Bash coverage gates the most consequential operations (commits, pushes, PR creation, file mutations).
+Rationale per version: v4.1 added the marker hook; v4.2 closed the per-turn and Bash gaps; v4.3 closes the agent-discretion gap (auto-injection + routing declaration) and the persistence gap (intents now survive sessions as versioned artifacts under `docs/intents/`).
 
 ### code-graph (auto + manual)
 **MUST trigger** on any of:

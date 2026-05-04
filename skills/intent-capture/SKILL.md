@@ -25,7 +25,7 @@ attribution: Grilling pattern derived from mattpocock/skills/grill-with-docs (ht
 
 Identify whether the operator message is an action request or read-only. If read-only → exit, answer directly. If action → proceed to Step 2.
 
-**Per-turn invariant (v4.2):** every operator turn arrives with a clean slate — the `clear-intent-marker.sh` UserPromptSubmit hook invalidated any prior marker. Treat each turn as a potentially new ask. The single exception is short confirmations of an intent already in progress this turn ("sí", "dale", "procedé") — those do not start a new grill, they continue Step 5.
+**Per-turn invariant (v4.3):** every operator turn arrives with a clean slate — the `clear-intent-marker.sh` UserPromptSubmit hook invalidated any prior marker AND emitted a system-reminder via `hookSpecificOutput.additionalContext` that authoritatively triggers this skill. Treat that injected reminder as the canonical signal, not your own pattern-matching of operator words. The single exception is short confirmations of an intent already in progress this turn ("sí", "dale", "procedé") — those do not start a new grill, they continue Step 5.
 
 ### Step 2: Grill
 
@@ -59,10 +59,15 @@ If the operator adds new asks → loop back to Step 2 for each new ask with `ask
 
 Wait for explicit confirmation ("yes, go ahead", "that's it", "proceed", or equivalent). On confirm:
 - Set `status: "confirmed"`, record `confirmed_at` and `confirmed_via`.
-- **Write the intent marker**: create `<project-root>/.claude/.intent-confirmed-<ISO-timestamp>` (UTC, RFC 3339 format, e.g. `.intent-confirmed-2026-05-04T18:42:00Z`). Create the `.claude/` directory if it does not exist. This marker is consumed by the PreToolUse hook `pre-edit-intent-gate.sh` — without it, subsequent Edit/Write/Bash on implementation paths will be blocked. The marker authorizes Edit/Write/Bash until the next operator turn; it is invalidated automatically by `clear-intent-marker.sh` (UserPromptSubmit) when the next prompt arrives. There is no time-based window — the boundary is the operator turn.
+- **Dual-write (v4.3)** — write BOTH artifacts:
+  1. **Marker (audit token)**: `<project-root>/.claude/.intent-confirmed-<ISO-timestamp>` (UTC, RFC 3339, e.g. `.intent-confirmed-2026-05-04T18:42:00Z`). Empty file. Gitignored. Valid until next UserPromptSubmit invalidates it. Consumed by `pre-edit-intent-gate.sh`.
+  2. **Persisted record (versioned artifact)**: `<project-root>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` — markdown with YAML frontmatter (status, captured_at, confirmed_at, operator_id, agent_version, category, related_pr, related_branch) and a narrative body (Original ask, Refined intent, Scope in/out, Acceptance, Routing declaration, Outcome, Original JSON in fenced block at the end). Committed to git. See `docs/intents/README.md` for format.
+- Marker-only is insufficient — confirmed intents are first-class development artifacts equivalent to ADRs (Rule 8).
 - This JSON is the execution contract passed to the routed subagent.
 
 ### Step 6: Route and Execute
+
+**v4.3 routing declaration** — before any tool call within the confirmed intent's execution, the agent MUST declare the routing decision to the operator and wait for explicit approval. Format: a brief table or paragraph stating, per file or scope, "Voy a usar [subagent X / main-direct] porque [reason]". The operator may approve as-is or override. Routing decisions are NOT at agent discretion — declaring them is the closing of the last discretion gap. See Rule 7 of `rules/core/intent-capture-required.md`.
 
 Select the subagent based on `category` and scope. See `references/execution-routing.md` for the full decision tree. Summary:
 
