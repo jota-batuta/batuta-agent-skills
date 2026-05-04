@@ -57,6 +57,22 @@ None. All 3 file changes implemented exactly as specified in the plan's "Archivo
 4. `ls -la hooks/clear-intent-marker.sh` → `-rwxrwxrwx` (executable)
 5. `git status --short` after staging → exactly 3 files in index, no unexpected additions
 
+## v4.3 amendment (2026-05-04)
+
+**Task**: Replace `hooks/clear-intent-marker.sh` with v4.3 — adds Part 2 (JSON `additionalContext` injection via `hookSpecificOutput`) to the existing Part 1 (marker invalidation, preserved verbatim from v4.2).
+
+**Libraries researched**: Claude Code hooks `hookSpecificOutput.additionalContext` protocol — https://docs.claude.com/en/docs/claude-code/hooks (verified 2026-05-04, Claude Code 2.x). `jq -n --arg` pattern used for safe string embedding (avoids manual JSON escaping). `python3` fallback used when `jq` is absent — same pattern as prior hooks.
+
+**Non-obvious decisions**:
+- `jq -n --arg ctx "$reminder"` chosen over here-doc interpolation: `--arg` handles all shell-special chars and newlines without escaping. The `python3` fallback passes the reminder via `REMINDER` env var (same reason — avoids shell quoting issues in the `-c` string).
+- `trap 'exit 0' ERR` at top of script ensures both Part 1 and Part 2 are fail-soft. If `jq` or `python3` produce non-zero exit codes, the trap catches it and exits 0 — session never blocked.
+- No JSON emitted when neither `jq` nor `python3` is available. The hook exits 0 silently; the reminder is skipped as a best-effort feature, consistent with the fail-soft contract.
+
+**Verification results (v4.3)**:
+1. `bash -n hooks/clear-intent-marker.sh` → SYNTAX OK
+2. `ls -la hooks/clear-intent-marker.sh` → `-rwxrwxrwx` (executable bit present)
+3. `echo '{}' | bash hooks/clear-intent-marker.sh | python3 -m json.tool` → valid JSON with `hookSpecificOutput.additionalContext` containing the full reminder string
+
 ## Open questions for auditors
 
 - Q1 (test-engineer): Is there a test covering the `clear-intent-marker.sh` fail-soft path (no `.git/` found, no `.claude/` dir)? Recommend adding to `tests/` if the test harness covers hooks.
