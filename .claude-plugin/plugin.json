@@ -7,8 +7,5 @@
     "url": "https://github.com/jota-batuta"
   },
   "homepage": "https://github.com/jota-batuta/batuta-agent-skills",
-  "commands": ["./.claude/commands"],
-  "skills": ["./skills"],
-  "agents": ["./agents"],
-  "hooks": "./hooks/hooks.json"
+  "commands": "./.claude/commands"
 }
