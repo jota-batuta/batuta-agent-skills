@@ -91,7 +91,7 @@ Per ADR-0012 in `batuta-agent-skills`, Obsidian is the single source of truth fo
 
 **Manual when needed**: `/kb-curate` for batch L1→L2 promotion of accumulated journal bullets (still useful for backlog drain). `/kb-end-session` closes the project journal.
 
-**Deprecated**: `notion-kb-workflow --read | --init | --append`. The skill frontmatter now has `status: deprecated`. Do not invoke it.
+**Removed in v4.0 (ADR-0013)**: the `notion-kb-workflow` skill directory was deleted from the plugin. Function is covered by `hooks/session-start.sh` + `hooks/post-commit-kb.sh` + the `kb-pipeline` agent (when `.claude/kb-config.json` has `kb_pipeline_enabled: true`). The original SKILL.md remains in git history if needed.
 
 **Wikilink invariant**: Every file written to the vault must include inline `[[wikilinks]]` for client, project, technology, and cross-KB references. Every file must have a `related:` frontmatter field (YAML list of wikilinks). This is the sole mechanism connecting notes in the Obsidian graph — without wikilinks, entries are invisible to `research-first-dev` Step 1.5 and to the graph view. Convention defined in `batuta-kb-vault` SKILL.md Step 3.5.
 
