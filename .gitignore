@@ -12,3 +12,4 @@ node_modules/
 .claude/rules/
 .aider.conf.yml
 .claude/kb-config.json
+graphify-out/
