@@ -57,6 +57,7 @@ If the operator adds new asks → loop back to Step 2 for each new ask with `ask
 
 Wait for explicit confirmation ("yes, go ahead", "that's it", "proceed", or equivalent). On confirm:
 - Set `status: "confirmed"`, record `confirmed_at` and `confirmed_via`.
+- **Write the intent marker**: create `<project-root>/.claude/.intent-confirmed-<ISO-timestamp>` (UTC, RFC 3339 format, e.g. `.intent-confirmed-2026-05-04T18:42:00Z`). Create the `.claude/` directory if it does not exist. This marker is consumed by the PreToolUse hook `pre-edit-intent-gate.sh` — without it, subsequent Edit/Write on implementation paths will be blocked. The marker is valid for 60 minutes from its mtime.
 - This JSON is the execution contract passed to the routed subagent.
 
 ### Step 6: Route and Execute
