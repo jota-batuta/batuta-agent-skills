@@ -1,33 +1,32 @@
 #!/usr/bin/env bash
-# pre-edit-intent-gate.sh
+# pre-edit-intent-gate.sh (v4.2)
 # PreToolUse hook — enforces `rules/core/intent-capture-required.md`.
-# Blocks Write/Edit/MultiEdit on implementation paths when no fresh
+# Blocks Write/Edit/MultiEdit AND Bash on implementation paths when no
 # intent-confirmed marker exists in the project's .claude/ directory.
 #
-# Marker contract: `<project-root>/.claude/.intent-confirmed-<ISO>`
-#   - Written by `skills/intent-capture` Step 5 (on operator confirmation).
-#   - Valid for 60 minutes (mtime-based, not filename-based).
+# v4.2 changes (vs v4.1):
+#   - Bash matcher added: ALL Bash tool calls require a marker (no allow/deny lists).
+#   - Time window removed: marker existence is checked, not mtime. The companion
+#     `clear-intent-marker.sh` UserPromptSubmit hook invalidates markers at each
+#     operator turn boundary.
 #
-# Exempt paths (no marker required):
-#   .claude/**       — config, markers, settings
-#   docs/**          — plans, sessions, ADRs
-#   **/CLAUDE.md     — project instructions
-#   **/MEMORY.md     — auto-memory index
-#   memory/**        — auto-memory files
-#   .gitignore       — housekeeping
-#   README.md        — documentation
-#   LICENSE*         — license files
-#   plugin.json      — plugin manifest
-#   ATTRIBUTION.md   — vendored attribution
-#   CHANGELOG.md     — changelog
+# Marker contract: `<project-root>/.claude/.intent-confirmed-<ISO>`
+#   - Written by `skills/intent-capture` Step 5 on operator confirmation.
+#   - Deleted by `clear-intent-marker.sh` at the next UserPromptSubmit.
+#
+# Exempt paths for Edit/Write (no marker required):
+#   .claude/**, docs/**, **/CLAUDE.md, **/MEMORY.md, memory/**, .gitignore,
+#   README.md, LICENSE*, plugin.json, ATTRIBUTION.md, CHANGELOG.md
+#
+# Bash has NO exempt list — every Bash tool call is gated.
 #
 # Bypass: BATUTA_INTENT_BYPASS=1 (operator-side env var).
 #
 # Output protocol:
-#   exit 0 → allow the tool call
-#   exit 1 → block the tool call (stderr shown to model)
+#   exit 0 → allow
+#   exit 1 → block (stderr shown to model)
 #
-# Source: https://code.claude.com/docs/en/hooks (verified 2026-05-04, Claude Code 1.x)
+# Source: https://docs.claude.com/en/docs/claude-code/hooks (verified 2026-05-04, Claude Code 2.x)
 
 set -uo pipefail
 
@@ -45,6 +44,115 @@ if [[ "$event_name" == "PreToolUse" && -n "$agent_id" ]]; then
   exit 0
 fi
 
+tool_name=$(echo "$input" | jq -r '.tool_name // empty' 2>/dev/null)
+
+# ============================================================================
+# Helper: locate project root and check for marker.
+# Sets $project_root and $marker_found ("1" or "").
+# ============================================================================
+find_project_root_and_marker() {
+  local from_path="$1"
+  project_root=""
+  marker_found=""
+
+  # Try walk-up from from_path.
+  local search_dir
+  search_dir="$(dirname "$from_path")"
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if [[ -d "$search_dir/.git" ]]; then
+      project_root="$search_dir"
+      break
+    fi
+    local parent
+    parent="$(dirname "$search_dir")"
+    if [[ "$parent" == "$search_dir" ]]; then
+      break
+    fi
+    search_dir="$parent"
+  done
+
+  # Fall back to $CLAUDE_PROJECT_DIR.
+  if [[ -z "$project_root" && -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
+    project_root="${CLAUDE_PROJECT_DIR//\\//}"
+  fi
+
+  # Fall back to git rev-parse on cwd.
+  if [[ -z "$project_root" ]]; then
+    project_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+  fi
+
+  if [[ -z "$project_root" ]]; then
+    return
+  fi
+
+  local marker_dir="$project_root/.claude"
+  if [[ -d "$marker_dir" ]]; then
+    local f
+    f=$(find "$marker_dir" -maxdepth 1 -name '.intent-confirmed-*' -print -quit 2>/dev/null)
+    if [[ -n "$f" ]]; then
+      marker_found="1"
+    fi
+  fi
+}
+
+# ============================================================================
+# Bash branch — all Bash tool calls gated.
+# ============================================================================
+if [[ "$tool_name" == "Bash" ]]; then
+  # Resolve project root: $CLAUDE_PROJECT_DIR → cwd via git → none.
+  project_root="${CLAUDE_PROJECT_DIR:-}"
+  if [[ -z "$project_root" ]]; then
+    project_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+  fi
+
+  if [[ -z "$project_root" ]]; then
+    exit 0  # cannot resolve — fail-soft allow
+  fi
+
+  if [[ "${BATUTA_INTENT_BYPASS:-0}" == "1" ]]; then
+    mkdir -p "$project_root/.claude" 2>/dev/null
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS intent-gate(Bash) cwd=$PWD" >> "$project_root/.claude/kb-debug.log" 2>/dev/null
+    exit 0
+  fi
+
+  marker_dir="$project_root/.claude"
+  fresh_marker=""
+  if [[ -d "$marker_dir" ]]; then
+    fresh_marker=$(find "$marker_dir" -maxdepth 1 -name '.intent-confirmed-*' -print -quit 2>/dev/null)
+  fi
+
+  if [[ -n "$fresh_marker" ]]; then
+    exit 0
+  fi
+
+  cat >&2 <<EOF
+RULE violated (intent-capture gate, v4.2): cannot execute Bash without a confirmed intent.
+
+No intent marker found at $marker_dir/.intent-confirmed-* — the gate now applies to ALL Bash tool calls (gate-all-Bash, no allow-list).
+
+Required workflow before any Bash tool call:
+
+  1. The operator describes work → intent-capture skill triggers automatically.
+  2. The agent grills (one question per turn) until scope/acceptance are clear.
+  3. The agent captures: presents a JSON intent object for confirmation.
+  4. The operator confirms ("yes, go ahead", "proceed", "dale").
+  5. Step 5 writes the marker. Then Bash/Edit/Write are allowed for this turn.
+
+The marker is automatically invalidated at the next operator turn (UserPromptSubmit
+clears it). There is NO time window — the boundary is the operator turn.
+
+To bypass for legitimate quick fixes, restart Claude Code with:
+
+  BATUTA_INTENT_BYPASS=1 claude
+
+Rule: rules/core/intent-capture-required.md
+EOF
+  exit 1
+fi
+
+# ============================================================================
+# Edit/Write branch — file-path-based with exempt list.
+# ============================================================================
 file_path=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.notebook_path // ""' 2>/dev/null)
 if [[ -z "$file_path" ]]; then
   exit 0
@@ -100,14 +208,14 @@ fi
 if [[ "${BATUTA_INTENT_BYPASS:-0}" == "1" ]]; then
   echo "pre-edit-intent-gate.sh: BATUTA_INTENT_BYPASS=1 — allowing edit of $file_path" >&2
   mkdir -p "$project_root/.claude" 2>/dev/null
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS intent-gate file=$file_path" >> "$project_root/.claude/kb-debug.log" 2>/dev/null
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS intent-gate(Edit) file=$file_path" >> "$project_root/.claude/kb-debug.log" 2>/dev/null
   exit 0
 fi
 
 marker_dir="$project_root/.claude"
 fresh_marker=""
 if [[ -d "$marker_dir" ]]; then
-  fresh_marker=$(find "$marker_dir" -maxdepth 1 -name '.intent-confirmed-*' -mmin -60 -print -quit 2>/dev/null)
+  fresh_marker=$(find "$marker_dir" -maxdepth 1 -name '.intent-confirmed-*' -print -quit 2>/dev/null)
 fi
 
 if [[ -n "$fresh_marker" ]]; then
@@ -115,10 +223,10 @@ if [[ -n "$fresh_marker" ]]; then
 fi
 
 cat >&2 <<EOF
-RULE violated (intent-capture gate): cannot edit implementation file:
+RULE violated (intent-capture gate, v4.2): cannot edit implementation file:
   $file_path
 
-No confirmed intent marker found at $marker_dir/.intent-confirmed-* (markers expire after 60 minutes).
+No intent marker found at $marker_dir/.intent-confirmed-* — markers are invalidated at the start of each operator turn (UserPromptSubmit hook).
 
 Required workflow before editing implementation files:
 
@@ -127,6 +235,8 @@ Required workflow before editing implementation files:
   3. The agent captures: presents a JSON intent object for confirmation.
   4. The operator confirms ("yes, go ahead", "proceed", "dale").
   5. Step 5 of intent-capture writes the marker. Then edits are allowed.
+
+The marker is invalidated automatically at the next operator turn — no time window.
 
 To bypass for legitimate quick fixes, restart Claude Code with:
 

@@ -8,9 +8,9 @@ This rule is derived from the operator's global `~/.claude/CLAUDE.md` "Intent ca
 
 1. Before any `Edit` or `Write` to an implementation path (any file NOT in the exempt list), the agent (main or subagent acting as main) MUST first complete the `intent-capture` skill workflow end-to-end (Steps 1–5: Detect → Grill → Capture → Present → Confirm). The skill produces a JSON intent object with `status: "confirmed"` and the operator's explicit approval.
 2. Completion of Step 5 (operator confirmation) MUST write a marker file at `<project-root>/.claude/.intent-confirmed-<ISO-timestamp>` (UTC, RFC 3339 format). The marker is the proof-of-confirmation consumed by the runtime hook `pre-edit-intent-gate.sh`.
-3. The marker is valid for 60 minutes from its mtime. Any `Edit` or `Write` to an implementation path after the marker expires MUST re-invoke `intent-capture` and obtain a fresh confirmation.
+3. The marker is valid until the next operator turn. The companion hook `clear-intent-marker.sh` (UserPromptSubmit) deletes all `.intent-confirmed-*` markers before the agent processes a new prompt. There is no time-based expiration — the boundary is the operator turn, not the clock. Any operation after a new prompt arrives MUST re-invoke `intent-capture` and obtain fresh confirmation.
 4. Subagents (identified by `agent_id` in the PreToolUse stdin JSON) bypass the gate entirely. Rationale: subagents are dispatched by the main agent AFTER intent is confirmed — they inherit the confirmed intent from their briefing context.
-5. The gate does NOT apply to `Bash` tool calls. Rationale: distinguishing read-only from mutating shell commands is heuristic and fragile. The 95% of implementation work that matters flows through `Edit` and `Write`.
+5. The gate applies to ALL `Bash` tool calls. There is no allow-list of read-only commands and no deny-list of mutating patterns — distinguishing read-only from mutating in shell is heuristic and fragile. Gate everything; for genuinely trivial operations (interactive exploration without an action plan), the operator launches Claude Code with `BATUTA_INTENT_BYPASS=1`.
 
 ## Allowed patterns
 

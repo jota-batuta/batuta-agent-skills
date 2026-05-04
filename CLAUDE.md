@@ -67,9 +67,14 @@ Rationale: most bugs come from assuming outdated APIs. Context7 lookup is cheap,
 ### intent-capture (enforced)
 **MUST trigger** on any operator message that requests concrete action (imperative verb, file/repo/config change, feature description, bug report, refactor ask). The gate formalizes intent before execution: grill → capture → confirm → route.
 
-**Enforcement (v4.1)**: enforced at runtime by `hooks/pre-edit-intent-gate.sh` (registered in `hooks/hooks.json` as `PreToolUse` for `Write`/`Edit` on implementation paths). The hook blocks the Write/Edit unless a marker file `.claude/.intent-confirmed-<ISO>` (less than 60 minutes old) is present in the project's `.claude/` directory, written by `intent-capture` Step 5 on operator confirmation. Exempt paths (no marker required): `.claude/**`, `docs/**`, `**/CLAUDE.md`, `**/MEMORY.md`, `memory/**`, `.gitignore`, `README.md`, `LICENSE*`, `plugin.json`, `ATTRIBUTION.md`, `CHANGELOG.md`. Subagents bypass the gate (they inherit the confirmed intent from the main agent's context). Bypass: `BATUTA_INTENT_BYPASS=1` (operator-side env var). Full rule: [`rules/core/intent-capture-required.md`](rules/core/intent-capture-required.md).
+**Enforcement (v4.2)**: enforced at runtime by two hooks working together:
 
-Rationale: intent-capture was text-only enforcement until v4.1 — the agent could skip grilling and proceed to Edit/Write without the operator confirming. The PreToolUse hook + marker workflow converts the MUST into a real gate, matching the pattern of `pre-write-skill-gate.sh` and `pre-write-agent-gate.sh`.
+- `hooks/pre-edit-intent-gate.sh` (PreToolUse for `Write`/`Edit`/`MultiEdit`/`NotebookEdit` AND `Bash`): blocks the tool call unless a marker file `.claude/.intent-confirmed-<ISO>` exists in the project's `.claude/` directory. The marker is written by `intent-capture` Step 5 on operator confirmation. **The gate now applies to ALL Bash tool calls** — no allow-list of read-only commands. For genuinely trivial reads, the operator uses `BATUTA_INTENT_BYPASS=1`.
+- `hooks/clear-intent-marker.sh` (UserPromptSubmit): deletes all `.intent-confirmed-*` markers at the start of every operator turn. There is no time-based window — the marker is valid only until the next prompt arrives.
+
+Exempt paths for Edit/Write (no marker required): `.claude/**`, `docs/**`, `**/CLAUDE.md`, `**/MEMORY.md`, `memory/**`, `.gitignore`, `README.md`, `LICENSE*`, `plugin.json`, `ATTRIBUTION.md`, `CHANGELOG.md`. Bash has no exempt list. Subagents bypass the gate via `agent_id` (they inherit the confirmed intent from their briefing). Full rule: [`rules/core/intent-capture-required.md`](rules/core/intent-capture-required.md).
+
+Rationale: v4.1 had two gaps — Bash was unsegmented, and the 60-minute marker window let multiple operator turns share one confirmation. v4.2 closes both: per-turn invalidation forces a fresh grill on every operator turn, and Bash coverage gates the most consequential operations (commits, pushes, PR creation, file mutations).
 
 ### code-graph (auto + manual)
 **MUST trigger** on any of:
