@@ -9,7 +9,7 @@ For the **why** behind these recipes, see [`docs/PRD.md`](../PRD.md). For the **
 | Guide | When you need it |
 |---|---|
 | [`upgrading.md`](upgrading.md) | A new plugin version shipped to `main`. Your local cache is stale. You need new skills (e.g. `code-graph`) in your interactive session. |
-| [`code-graph.md`](code-graph.md) | You want to use the dual-engine code knowledge graph in a repo (architecture questions, blast-radius audits). Includes how to apply it to old repos. |
+| [`code-graph.md`](code-graph.md) | You want to use the code knowledge graph in a repo (architecture questions, blast-radius audits). Includes how to apply it to old repos. |
 | [`consumer-projects.md`](consumer-projects.md) | You're starting work on an existing repo (yours or a client's) that should adopt the plugin's conventions. Covers retrofit, rules import, doc skeleton. |
 | [`ci.md`](ci.md) | You want to wire the static validators + E2E harness into a consumer repo's GitHub Actions. Includes the `ANTHROPIC_API_KEY` setup and the cost gate. |
 
