@@ -32,41 +32,75 @@ This more closely matches how Claude Code behaves in practice, where skills are 
 
 ## Installation
 
-1. Clone the repository (or install via `/plugin install batuta-agent-skills@batuta-agent-skills` in Claude Code; both leave a checkout opencode can read):
+There are two supported shapes:
+
+1. **Run from a clone of this plugin itself** (you cloned the plugin and are running opencode inside it). Skip to step 2 (set the API key) and step 3 (`opencode`); the `.opencode/skills` symlink and the `instructions` glob in the shipped `opencode.json` already resolve relative to the clone.
+
+2. **Run from a consumer project** (your own repo, opencode is launched there). Use the `open()` helper below — it shallow-clones the plugin to a tmp dir, copies the four needed trees into your consumer's `.opencode/`, rewrites paths, and removes the tmp clone.
+
+### Consumer install via `open()` helper (recommended for consumers)
+
+Drop this into `~/.bashrc` or `~/.zshrc`:
 
 ```bash
-git clone https://github.com/jota-batuta/batuta-agent-skills.git
-cd batuta-agent-skills
+# OpenCode: install skills + launch
+open() {
+  if [ ! -f opencode.json ]; then
+    local tmp=$(mktemp -d)
+    git clone --depth 1 https://github.com/jota-batuta/batuta-agent-skills.git "$tmp/repo" \
+      && cp "$tmp/repo/opencode.json" . \
+      && cp -r "$tmp/repo/.opencode" . \
+      && cp "$tmp/repo/AGENTS.md" .opencode/ \
+      && rm -f .opencode/skills \
+      && cp -r "$tmp/repo/skills" .opencode/ \
+      && cp -r "$tmp/repo/rules" .opencode/ \
+      && sed -i 's|"\./rules/|"./.opencode/rules/|g' opencode.json \
+      && rm -rf "$tmp" \
+      && echo '✅ OpenCode instalado'
+  fi
+  opencode
+}
 ```
 
-2. **Set the OpenRouter API key out-of-repo and source it into the env**:
+Heads up: this function shadows the macOS `open` command. If that matters, rename to `oc()` / `open-with-skills()` / similar.
+
+What the helper does, line by line:
+- `mktemp -d` → scratch directory outside the consumer.
+- `git clone --depth 1` → shallow clone of the plugin to scratch.
+- `cp $tmp/repo/opencode.json .` → opencode reads `opencode.json` from the consumer root, so it has to go there.
+- `cp -r $tmp/repo/.opencode .` → bring the curated tree (`agents/`, `commands/`, `AGENTS.md.template`, the dangling `skills` symlink).
+- `cp $tmp/repo/AGENTS.md .opencode/` → preserve the plugin's cross-tool root `AGENTS.md` under `.opencode/AGENTS.md` for reference. **opencode reads `AGENTS.md` from your consumer root, NOT from `.opencode/`.** If you want the strict opencode contract as your effective AGENTS.md, after the helper finishes run `cp .opencode/AGENTS.md.template AGENTS.md`.
+- `rm -f .opencode/skills` → drop the symlink (it pointed at `../skills/` which doesn't exist in the consumer).
+- `cp -r $tmp/repo/skills .opencode/` and `cp -r $tmp/repo/rules .opencode/` → physical copies of the 34 skills and the rules invariants.
+- `sed -i 's|"\./rules/|"./.opencode/rules/|g' opencode.json` → rewrite the nine `instructions` paths so they point at the new local `.opencode/rules/` location.
+- `rm -rf "$tmp"` → cleanup.
+
+Then in any consumer project:
 
 ```bash
+cd ~/myapp
 echo 'YOUR_OPENROUTER_API_KEY_HERE' > ~/.openrouter-key && chmod 600 ~/.openrouter-key
 # Replace YOUR_OPENROUTER_API_KEY_HERE with your actual key from
 # https://openrouter.ai/settings/keys (paste it inside the quotes).
 export OPENROUTER_API_KEY=$(cat ~/.openrouter-key)
+open
 ```
 
-NEVER paste the literal key into `opencode.json`. The shipped `opencode.json` uses `{env:OPENROUTER_API_KEY}` template syntax.
+NEVER paste the literal key into `opencode.json`. The shipped file uses `{env:OPENROUTER_API_KEY}` template syntax.
 
-3. Open the project in opencode:
+The helper is idempotent: it only runs the install branch if `opencode.json` is absent. After the first run it just exec's `opencode`. To upgrade the frozen skills/rules to a newer plugin version, `rm -rf .opencode/ opencode.json && open`.
 
-```bash
-opencode
-```
+### Verify the integration is present (consumer)
 
-4. Verify the integration is present:
+After `open` finishes:
 
-- `AGENTS.md` (root) — cross-tool entry point
-- `skills/` — canonical skill source (the symlink target for `.opencode/skills/`)
-- `.opencode/skills/` — symlink → `../skills/`
-- `.opencode/agents/*.md` (9) — opencode-shaped agent frontmatter
-- `.opencode/commands/*.md` (13) — opencode-shaped slash commands
-- `opencode.json` (root) — provider/model/permission/instructions
-- `.opencode/AGENTS.md.template` — strict opencode contract; copy to your project root as `AGENTS.md` if you are running this plugin from a CONSUMER repo.
-
-For a consumer repo (your own project that wants to adopt the plugin's interop layer), see "Consumer setup" below.
+- `opencode.json` (consumer root) — provider/model/permission/instructions, with the rewritten `./.opencode/rules/...` paths.
+- `.opencode/skills/` — physical copy of the 34 skills (not a symlink in the consumer).
+- `.opencode/rules/` — physical copy of the engineering invariants imported by `opencode.json`'s `instructions` glob.
+- `.opencode/agents/*.md` (9) — opencode-shaped agent frontmatter.
+- `.opencode/commands/*.md` (13) — opencode-shaped slash commands.
+- `.opencode/AGENTS.md.template` — strict opencode contract; copy to consumer root as `AGENTS.md` if you want it as your project's effective contract.
+- `.opencode/AGENTS.md` — copy of the plugin's cross-tool root AGENTS.md (reference only; not read by opencode).
 
 ---
 
@@ -170,9 +204,9 @@ These rules are enforced via `AGENTS.md`.
 
 ---
 
-## Consumer setup (your project consumes the plugin via opencode)
+## Alternative: symlink-based consumer setup (live-updating, plugin must stay on disk)
 
-If your project lives at `~/myapp/` and the plugin clone at `~/batuta-agent-skills/`:
+If you prefer a live link to a plugin clone instead of a frozen copy (e.g. you want to track plugin updates without re-running the helper, or you maintain the plugin alongside the consumer), use symlinks. Trade-off: the plugin must stay at the same on-disk path; deleting it breaks the consumer.
 
 ```bash
 cd ~/myapp
@@ -184,16 +218,7 @@ cp ~/batuta-agent-skills/.opencode/AGENTS.md.template AGENTS.md
 cp ~/batuta-agent-skills/opencode.json opencode.json
 ```
 
-**The shipped `opencode.json` uses paths relative to the plugin clone, not your project. If you copy it verbatim, opencode will fail to load the rules.** Edit the `instructions` array to point at the plugin's `rules/` with the absolute path under your clone. Replace:
-
-```json
-  "instructions": [
-    "./rules/core/code-style.md",
-    "./rules/core/secrets-and-pii.md",
-    ...
-```
-
-with (assuming the plugin lives at `~/batuta-agent-skills/`):
+**The shipped `opencode.json` uses `./rules/...` paths relative to the plugin clone, not your project. If you copy it verbatim, opencode will fail to load the rules.** Rewrite the nine `instructions` entries to absolute paths under the plugin clone:
 
 ```json
   "instructions": [
@@ -209,7 +234,7 @@ with (assuming the plugin lives at `~/batuta-agent-skills/`):
   ]
 ```
 
-Then `opencode` from `~/myapp/` will load the 34 skills (via symlink), 9 agents, 13 commands, the strict AGENTS.md contract, AND the engineering invariants from `rules/`.
+Then `opencode` from `~/myapp/` will load the 34 skills (via symlink), 9 agents, 13 commands, the strict AGENTS.md contract, AND the engineering invariants from `rules/` — and any change made in the plugin clone is immediately visible to all consumers symlinked to it.
 
 ## OpenRouter / model considerations (validated under DeepSeek V4 Pro)
 
