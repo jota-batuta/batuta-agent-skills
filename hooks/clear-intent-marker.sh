@@ -61,7 +61,17 @@ if [[ -n "$project_root" ]]; then
     count=${#markers[@]}
     if [[ $count -gt 0 ]]; then
       rm -f "${markers[@]}" 2>/dev/null
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh removed ${count} marker(s) from $marker_dir" >> "$marker_dir/kb-debug.log" 2>/dev/null
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh removed ${count} intent marker(s) from $marker_dir" >> "$marker_dir/kb-debug.log" 2>/dev/null
+    fi
+
+    # v4.4: also invalidate routing-confirmed markers at the turn boundary
+    shopt -s nullglob
+    routing_markers=("$marker_dir"/.routing-confirmed-*)
+    shopt -u nullglob
+    rcount=${#routing_markers[@]}
+    if [[ $rcount -gt 0 ]]; then
+      rm -f "${routing_markers[@]}" 2>/dev/null
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh removed ${rcount} routing marker(s) from $marker_dir" >> "$marker_dir/kb-debug.log" 2>/dev/null
     fi
   fi
 fi
@@ -70,17 +80,17 @@ fi
 # Part 2 — Inject system-reminder (v4.3 auto-injection).
 # ============================================================================
 
-reminder='🛑 v4.3 INTENT GATE — operator turn started, prior intent marker invalidated.
+reminder='🛑 v4.4 INTENT + ROUTING GATE — operator turn started, prior intent and routing markers invalidated.
 
 Before any Edit/Write/Bash tool call this turn, you MUST invoke the intent-capture skill:
 
-1. Action request ("hacé X", "implementá Y", "agregá Z") → grill (one Q/turn) → capture JSON → present → wait for "sí"/"dale"/"procedé" → write BOTH (a) <project>/.claude/.intent-confirmed-<ISO> marker AND (b) <project>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md versioned record → declare routing (subagent vs main-direct) and wait for operator approval → then execute.
+1. Action request ("hacé X", "implementá Y", "agregá Z") → grill (one Q/turn) → capture JSON → present → wait for "sí"/"dale"/"procedé" → write BOTH (a) <project>/.claude/.intent-confirmed-<ISO> marker AND (b) <project>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md versioned record → declare routing (subagent vs main-direct) → wait for SECOND operator approval → write <project>/.claude/.routing-confirmed-<ISO> marker → THEN execute (Task subagent dispatch is hook-blocked without the routing marker).
 
-2. Continuation of intent already presented this turn ("dale", "procedé", "sí") → straight to Step 5 of intent-capture (dual-write marker + intent file → declare routing → execute).
+2. Continuation of intent already presented this turn ("dale", "procedé", "sí") → straight to Step 5 of intent-capture (dual-write marker + intent file → declare routing → wait for routing approval → write routing marker → execute).
 
 3. Read-only question ("¿qué hace X?", "¿dónde está Y?") → answer directly, no grill.
 
-The pre-edit-intent-gate.sh hook blocks tool calls without a marker — but do NOT wait for it to fire. Grill PROACTIVELY. Routing decisions are NOT at your discretion: declare them and wait for approval.'
+The pre-edit-intent-gate.sh hook blocks Edit/Write/Bash without the intent marker. The pre-task-routing-gate.sh hook blocks Task (subagent dispatch) without the routing marker. Do NOT wait for either to fire — grill and declare routing PROACTIVELY.'
 
 # Emit JSON output protocol for UserPromptSubmit.
 # Format: {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "..."}}
