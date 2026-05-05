@@ -33,20 +33,47 @@ claude --plugin-dir /path/to/batuta-agent-skills
 
 ### For opencode (cross-tool)
 
-The plugin ships an opencode interop layer at `.opencode/` (skills symlink, agents, commands, AGENTS.md template) plus a root `opencode.json` with OpenRouter provider config. To use the plugin from opencode:
+The plugin ships an opencode interop layer (`.opencode/{skills,agents,commands,AGENTS.md.template}` + a root `opencode.json` with OpenRouter provider config). The recommended install for a **consumer project** is a one-shot helper that shallow-clones the plugin to a temp dir, copies the four trees (`opencode.json`, `.opencode/`, `skills/`, `rules/`) into the consumer under `.opencode/`, rewrites the `instructions` paths in `opencode.json` to point at the new local copy, and removes the temp clone. Drop this into your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
-git clone https://github.com/jota-batuta/batuta-agent-skills.git
-cd batuta-agent-skills
-
-# Set your OpenRouter API key out-of-repo (NEVER paste it into opencode.json):
-echo 'YOUR_OPENROUTER_API_KEY_HERE' > ~/.openrouter-key && chmod 600 ~/.openrouter-key
-export OPENROUTER_API_KEY=$(cat ~/.openrouter-key)
-
-opencode .
+# OpenCode: install skills + launch
+open() {
+  if [ ! -f opencode.json ]; then
+    local tmp=$(mktemp -d)
+    git clone --depth 1 https://github.com/jota-batuta/batuta-agent-skills.git "$tmp/repo" \
+      && cp "$tmp/repo/opencode.json" . \
+      && cp -r "$tmp/repo/.opencode" . \
+      && cp "$tmp/repo/AGENTS.md" .opencode/ \
+      && rm -f .opencode/skills \
+      && cp -r "$tmp/repo/skills" .opencode/ \
+      && cp -r "$tmp/repo/rules" .opencode/ \
+      && sed -i 's|"\./rules/|"./.opencode/rules/|g' opencode.json \
+      && rm -rf "$tmp" \
+      && echo '✅ OpenCode instalado'
+  fi
+  opencode
+}
 ```
 
-For a consumer project (your own repo that wants to adopt the interop layer), the steps are: symlink `.opencode/{skills,agents,commands}` from your project to the plugin clone, copy `.opencode/AGENTS.md.template` to your project root as `AGENTS.md`, copy `opencode.json` and rewrite `instructions` paths to absolute paths under the plugin clone. Full step-by-step in [`docs/opencode-setup.md`](docs/opencode-setup.md), including the OpenRouter `reasoning: false` requirement for DeepSeek and the manual Kimi K2.6 fallback.
+Heads up: this function name shadows the macOS `open` command. If you use `open file.pdf` from the shell on macOS, rename the function (e.g. `oc()` or `open-with-skills()`).
+
+Then in any consumer project:
+
+```bash
+cd ~/myapp
+echo 'YOUR_OPENROUTER_API_KEY_HERE' > ~/.openrouter-key && chmod 600 ~/.openrouter-key
+export OPENROUTER_API_KEY=$(cat ~/.openrouter-key)
+open    # first run installs frozen copies into ./.opencode/, then launches opencode; subsequent runs just launch
+```
+
+What lands in your consumer:
+- `opencode.json` (root) with `instructions` rewritten to point at `./.opencode/rules/`.
+- `.opencode/skills/` (physical copy of 34 skills, not a symlink).
+- `.opencode/rules/` (physical copy of the engineering invariants).
+- `.opencode/agents/` (9), `.opencode/commands/` (13), `.opencode/AGENTS.md.template`.
+- `.opencode/AGENTS.md` — the plugin's cross-tool root AGENTS.md, preserved for reference. **opencode reads `AGENTS.md` from your project root**, not from `.opencode/`. If you want the strict opencode contract as your project AGENTS.md, run `cp .opencode/AGENTS.md.template AGENTS.md` after the helper finishes.
+
+Trade-off: this approach freezes the plugin's skills and rules into your consumer at install time. To upgrade, delete `.opencode/` and re-run `open`. If you want a live-updating link to the plugin clone instead (single source of truth, but the plugin must stay on disk), see the symlink-based consumer setup in [`docs/opencode-setup.md`](docs/opencode-setup.md), which also covers the OpenRouter `reasoning: false` requirement for DeepSeek and the manual Kimi K2.6 fallback.
 
 After installing, the plugin's PreToolUse hook is active in every session where the plugin is enabled. It blocks **only** the kill-switch paths listed above; for all other paths Claude uses its native delegation judgment. The post-edit audit chain (test → review → security) runs on every staged diff regardless of authorship. See [`docs/DELEGATION-RULE.md`](docs/DELEGATION-RULE.md) for the full contract.
 
