@@ -6,11 +6,12 @@ This file is the cross-tool entry point for AI coding agents working in this rep
 
 `batuta-agent-skills` is a Claude Code plugin that ships:
 
-- **Six agents** with explicit `model:` declarations (5 base + `agent-architect` meta-agent)
+- **Nine agents** with explicit `model:` declarations (5 base + `agent-architect` meta-agent + 3 KB pipeline agents)
 - A **plugin-level PreToolUse hook** that enforces Rule #0 (the main agent never edits source code; everything goes through delegation)
 - A **sequential audit chain** (`test-engineer` → `code-reviewer` → `security-auditor`) with literal `AUDIT RESULT: APPROVED|BLOCKED` contract
 - A **project-wide doc graph** (`docs/PRD.md`, `docs/SPEC.md`, `docs/adr/`, `docs/plans/`, `docs/sessions/`)
-- 26 skills (20 upstream engineering skills + 6 Batuta-specific)
+- **34 skills** (engineering lifecycle + Batuta-specific KB and authoring skills)
+- **OpenCode interop** (`.opencode/skills` symlink, `.opencode/agents/` and `.opencode/commands/` with frontmatter rewritten for opencode, `opencode.json` template, `.opencode/AGENTS.md.template` strict contract — see [`docs/opencode-setup.md`](docs/opencode-setup.md))
 
 ## Rule #0 — delegation-only main agent (Claude Code-specific runtime)
 
@@ -34,18 +35,22 @@ Full handoff checklist: [`docs/PORTABILITY.md`](docs/PORTABILITY.md).
 
 ## OpenCode Integration
 
-OpenCode uses a **skill-driven execution model** powered by the `skill` tool and this repository's `/skills` directory.
+OpenCode uses a **skill-driven execution model** powered by the `skill` tool. This plugin ships a complete opencode interop layer at `.opencode/` validated end-to-end with DeepSeek V4 Pro via OpenRouter (see [`docs/opencode-setup.md`](docs/opencode-setup.md) for the bring-up notes and the IC-009/IC-010 sweep findings).
 
-### Core Rules
+### What ships for OpenCode consumers
 
-- If a task matches a skill, you MUST invoke it
-- Skills are located in `skills/<skill-name>/SKILL.md`
-- Never implement directly if a skill applies
-- Always follow the skill instructions exactly (do not partially apply them)
+- `.opencode/skills` — symlink to the plugin's `skills/` directory (zero duplication; opencode reads SKILL.md descriptions on-demand).
+- `.opencode/agents/*.md` (9) — opencode-shaped frontmatter (`mode: subagent`, `permission`, OpenRouter model IDs).
+- `.opencode/commands/*.md` (13) — opencode-shaped frontmatter (`description`, `agent: build`).
+- `opencode.json` (root) — provider config: OpenRouter, model defaults, **reasoning disabled** for DeepSeek to avoid empty-content timeouts, `instructions` glob to `rules/`.
+- `.opencode/AGENTS.md.template` — the strict opencode contract (Class A/B/C action-vs-analysis, MUST/NEVER, anti-rationalizations, pre-tool-call checklist). Consumers copy to their project root as `AGENTS.md`.
 
-### Intent → Skill Mapping
+### Core rules (model behavior contract)
 
-The agent should automatically map user intent to skills:
+- For each user message: skim `.opencode/skills/` descriptions; if any apply, invoke `skill({name})` and follow the skill's procedure exactly. NEVER skip a skill because the task seems trivial.
+- Distinguish Class A (action requests, MUST grill) vs Class B (analysis/lookup/audit, act directly) vs Class C (ambiguous, ask which mode). The full procedure lives in `.opencode/AGENTS.md.template`.
+
+### Intent → skill mapping
 
 - Feature / new functionality → `spec-driven-development`, then `incremental-implementation`, `test-driven-development`
 - Planning / breakdown → `planning-and-task-breakdown`
@@ -54,6 +59,9 @@ The agent should automatically map user intent to skills:
 - Refactoring / simplification → `code-simplification`
 - API or interface design → `api-and-interface-design`
 - UI work → `frontend-ui-engineering`
+- Security / vulnerability concern → `security-and-hardening`
+- Performance / latency → `performance-optimization`
+- Documentation / decision → `documentation-and-adrs`
 
 ### Lifecycle Mapping (Implicit Commands)
 
