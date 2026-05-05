@@ -53,3 +53,28 @@ The session ran end-to-end through plan mode → slice implementation → audit 
 Next session entry point: open PR `feat/trust-native-delegation` → `main` to land v2.8 on main, then plan **v2.9 supply-chain hardening** (M1 from GATE 3: pin `install.sh` of codebase-memory-mcp to a release tag + verify SHA-256 before exec).
 
 The v2.9 slice is small in scope (`tools/setup-code-graph.sh` Bloque 2 + ADR amendment + validator extension). Open question for that slice: do we keep `main` as a movable target during graphify-only platforms (since we cannot hash-pin a script we depend on through PyPI), or only pin the codebase-memory-mcp installer and document the asymmetric trust posture?
+
+## Curation log
+
+- bullet "Dual-engine over single-engine"
+  - curated_into: [decisions/code-graph-dual-engine.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Skill-governed over graphify claude install"
+  - curated_into: [decisions/skill-governed-over-upstream-claude-install.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Auto-install via bootstrap, not BYO" — noise (procedural)
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Obsidian explicitly out of scope" — noise (slice-specific)
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "PR base feat/trust-native-delegation, not main" — noise (procedural)
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet ".gitattributes introduced for *.sh text eol=lf"
+  - curated_into: [gotchas/git-bash-windows-eol-shell-scripts.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- "Audit chain results"
+  - curated_into: [gotchas/file-mode-100644-vs-100755-on-windows.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- "Plan-mode workflow notes" — noise (process retrospective)
+  - curated_at: 2026-05-05T00:38:00Z
+- Changes section bullets — noise (commit log)
+  - curated_at: 2026-05-05T00:38:00Z

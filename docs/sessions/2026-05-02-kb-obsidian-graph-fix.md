@@ -18,3 +18,11 @@ last_verified: 2026-05-02
   - branch: `docs/deprecate-notion-kb-workflow`
   - files: 3 (`.claude-plugin/marketplace.json,README.md,docs/SPEC.md`)
   - plan: docs/plans/active/2026-05-02-kb-obsidian-graph-fix.md
+
+## Curation log
+
+- bullet "wikilink convention + connected graph + functional dashboard"
+  - curated_into: [glossary/obsidian-vault.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "rewrite README + SPEC v3.6" — noise (auto-captured commit log)
+  - curated_at: 2026-05-05T00:38:00Z

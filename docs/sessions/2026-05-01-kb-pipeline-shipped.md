@@ -61,3 +61,27 @@ Next session entry point: no pending plans. Sprints 1–4 of `2026-04-29-kb-pipe
 2. Sprint 4 (Notion SKILL deprecation): rewrite `skills/notion-kb-workflow/SKILL.md` frontmatter to `status: deprecated`.
 3. Sprint 5 (vault query agent): create a `vault-query` skill that reads the curated vault to answer natural-language questions ("¿por qué dejamos de usar Pydantic?").
 4. Vault untracked content (40+ glossary entries, 3 client folders, `_meta/`, `templates/task.md`) needs a commit in `jota-batuta/batuta-kb` — currently sitting in working tree only.
+
+## Curation log
+
+- bullet "Single agent with 3 internal phases (D2 in ADR-0012)"
+  - curated_into: [decisions/single-agent-with-internal-phases-vs-three-agents.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Per-commit async dispatch via nohup timeout 120 (D3)"
+  - curated_into: [decisions/async-dispatch-with-timeout-watchdog.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Slug + path validation gate before LLM prompt interpolation"
+  - curated_into: [decisions/async-dispatch-with-timeout-watchdog.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Three-tier kb-pipeline agent lookup"
+  - curated_into: [decisions/three-tier-agent-lookup.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Notion deprecation gradual, not abrupt" — noise (procedural; covered by obsidian-vault-over-notion-kb)
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Vault .git/ separated to local SSD"
+  - curated_into: [decisions/vault-git-separated-from-drive.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- Changes section bullets — noise (commit log)
+  - curated_at: 2026-05-05T00:38:00Z
+- Audit chain results table — noise (slice-specific verification)
+  - curated_at: 2026-05-05T00:38:00Z

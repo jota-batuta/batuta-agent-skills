@@ -77,3 +77,30 @@ Suggested next actions, in priority order:
 1. **BBVA Corriente** — return to that project, open Claude Code there, follow `docs/sessions/2026-04-27-bootstrap-and-retrofit.md` `Next:` line which points at `docs/plans/active/2026-04-27-architecture-by-variable.md`. The pre-flight check will pass (docs/plans/active/ exists), the implementer can proceed without improvising. Estimated 2-4 hours to ship Stage 1 + features encoding/numoper.
 2. **(Optional) Stop hook for session-handoff (v2.5 milestone)** — only if the plan-mode persistence reminder proves insufficient in practice. Wait for a real drift instance before building the hook.
 3. **(Optional) Promote BBVA-specific learnings to plugin** — once Stage 1 ships in BBVA and stabilizes, evaluate whether any pattern (e.g. "stages-as-immutable-parquets discipline") is generalizable enough to become a `rules/stack/` rule. Requires N=2 evidence per the §A.6 admission gate.
+
+## Curation log
+
+- bullet "Retrofit is a new mode, not a fix to existing modes"
+  - curated_into: [decisions/project-retrofit-as-new-mode.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Implementer pre-flight is a hard BLOCKER"
+  - curated_into: [playbooks/preflight-blocker-plus-retrofit.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Dual-path canonical resolution"
+  - curated_into: [playbooks/preflight-blocker-plus-retrofit.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Plan-mode persistence is convention, not automation" — noise (procedural; supersedes flows)
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Phantom-SHA cache is a Claude Code-level bug"
+  - curated_into: [gotchas/plugin-cache-phantom-sha.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- finding "Plugin cache phantom-SHA is a real failure mode"
+  - curated_into: [gotchas/plugin-cache-phantom-sha.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- finding "Pre-flight-as-BLOCKER + retrofit is a clean pattern"
+  - curated_into: [playbooks/preflight-blocker-plus-retrofit.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- finding "Plan-mode persistence is a convention gap, not a Claude Code bug" — noise (superseded by ADR-0005)
+  - curated_at: 2026-05-05T00:38:00Z
+- Changes section bullets — noise (commit log)
+  - curated_at: 2026-05-05T00:38:00Z
