@@ -11,10 +11,13 @@ Read these in order to understand the project:
 5. [`docs/usage/`](docs/usage/) -- operator recipes (upgrade, code-graph, consumer-projects, CI)
 6. [`docs/adr/`](docs/adr/) -- 12 architecture decision records
 7. [`CLAUDE.md`](CLAUDE.md) -- project conventions and session-handoff protocol
+8. [`docs/opencode-setup.md`](docs/opencode-setup.md) -- using the plugin from opencode (open-source models via OpenRouter)
 
 If you are switching from Claude Code to another tool mid-feature, read [`docs/PORTABILITY.md`](docs/PORTABILITY.md).
 
 ## Install
+
+### For Claude Code
 
 ```
 /plugin marketplace add jota-batuta/batuta-agent-skills
@@ -27,6 +30,23 @@ Or, for local development:
 git clone https://github.com/jota-batuta/batuta-agent-skills.git
 claude --plugin-dir /path/to/batuta-agent-skills
 ```
+
+### For opencode (cross-tool)
+
+The plugin ships an opencode interop layer at `.opencode/` (skills symlink, agents, commands, AGENTS.md template) plus a root `opencode.json` with OpenRouter provider config. To use the plugin from opencode:
+
+```bash
+git clone https://github.com/jota-batuta/batuta-agent-skills.git
+cd batuta-agent-skills
+
+# Set your OpenRouter API key out-of-repo (NEVER paste it into opencode.json):
+echo 'YOUR_OPENROUTER_API_KEY_HERE' > ~/.openrouter-key && chmod 600 ~/.openrouter-key
+export OPENROUTER_API_KEY=$(cat ~/.openrouter-key)
+
+opencode .
+```
+
+For a consumer project (your own repo that wants to adopt the interop layer), the steps are: symlink `.opencode/{skills,agents,commands}` from your project to the plugin clone, copy `.opencode/AGENTS.md.template` to your project root as `AGENTS.md`, copy `opencode.json` and rewrite `instructions` paths to absolute paths under the plugin clone. Full step-by-step in [`docs/opencode-setup.md`](docs/opencode-setup.md), including the OpenRouter `reasoning: false` requirement for DeepSeek and the manual Kimi K2.6 fallback.
 
 After installing, the plugin's PreToolUse hook is active in every session where the plugin is enabled. It blocks **only** the kill-switch paths listed above; for all other paths Claude uses its native delegation judgment. The post-edit audit chain (test → review → security) runs on every staged diff regardless of authorship. See [`docs/DELEGATION-RULE.md`](docs/DELEGATION-RULE.md) for the full contract.
 
@@ -195,7 +215,10 @@ Expect conflicts in `CLAUDE.md`, `README.md`, `agents/*.md`, `hooks/hooks.json`,
 
 ## Cross-tool portability
 
-The plugin's runtime enforcement (hook, audit chain, agent delegation) is specific to **Claude Code 1.x**. The doc graph (PRD/SPEC/ADRs/plans/sessions) is plain Markdown and ports to any tool that reads project files. If you need to continue work in Cursor, Codex CLI, Aider, or another tool, see [`docs/PORTABILITY.md`](docs/PORTABILITY.md) for what survives the switch.
+The plugin's runtime enforcement (PreToolUse hook, audit chain, `Task` subagent delegation) is specific to **Claude Code 1.x**. The doc graph (PRD/SPEC/ADRs/plans/sessions) is plain Markdown and ports to any tool that reads project files.
+
+- **OpenCode (shipped interop layer)** — `.opencode/{skills,agents,commands}` + `opencode.json` + `.opencode/AGENTS.md.template` ship with the plugin. Setup, OpenRouter model considerations, and the DeepSeek `reasoning: false` requirement are documented in [`docs/opencode-setup.md`](docs/opencode-setup.md). The strict opencode AGENTS.md template (Class A/B/C action-vs-analysis distinction) compensates for the absence of PreToolUse hooks in opencode.
+- **Cursor, Codex CLI, Aider, Gemini CLI, Windsurf** — see [`docs/PORTABILITY.md`](docs/PORTABILITY.md) for the doc-graph handoff and what survives the switch.
 
 ## Contributing
 
