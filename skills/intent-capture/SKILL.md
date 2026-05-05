@@ -67,7 +67,14 @@ Wait for explicit confirmation ("yes, go ahead", "that's it", "proceed", or equi
 
 ### Step 6: Route and Execute
 
-**v4.3 routing declaration** — before any tool call within the confirmed intent's execution, the agent MUST declare the routing decision to the operator and wait for explicit approval. Format: a brief table or paragraph stating, per file or scope, "Voy a usar [subagent X / main-direct] porque [reason]". The operator may approve as-is or override. Routing decisions are NOT at agent discretion — declaring them is the closing of the last discretion gap. See Rule 7 of `rules/core/intent-capture-required.md`.
+**v4.4 routing declaration + marker** — before any tool call within the confirmed intent's execution, the agent MUST:
+
+1. Declare the routing decision to the operator in plain language. Format: a brief table or paragraph stating per file or scope, "Voy a usar [subagent X / main-direct] porque [reason]". The operator may approve as-is or override.
+2. Wait for explicit operator approval ("dale", "procedé", "approved", or equivalent). This approval is SEPARATE from the intent-confirmation in Step 5 — even though both can come in the same operator message.
+3. Write the routing marker: `<project-root>/.claude/.routing-confirmed-<ISO-timestamp>` (UTC, RFC 3339). Without this marker, the `pre-task-routing-gate.sh` hook blocks any `Task` tool call (subagent dispatch). The marker is invalidated by `clear-intent-marker.sh` at every UserPromptSubmit (turn boundary), parallel to the intent marker.
+4. THEN execute — delegate to subagent via `Task`, or proceed main-direct.
+
+Routing decisions are NOT at agent discretion. The hook + marker pair (parallel to the v4.3 intent gate) gives runtime enforcement: even if the agent's pattern-matching of operator words slips, the gate catches it. See Rule 7 of `rules/core/intent-capture-required.md`.
 
 Select the subagent based on `category` and scope. See `references/execution-routing.md` for the full decision tree. Summary:
 
