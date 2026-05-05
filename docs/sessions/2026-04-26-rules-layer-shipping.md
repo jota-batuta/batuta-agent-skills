@@ -88,3 +88,29 @@ Next session entry point: no pending plans. The plugin is at v2.3.0, the user-le
 3. **`Stop` hook for session-handoff** (PRD v2.4 milestone) — auto-enforces journal-writing at session end. Defer until an operator drift instance proves the convention isn't holding.
 
 If the operator returns tomorrow without a specific direction: read this journal, confirm `Next:` is "no pending plans", then ask the operator what they want to do next. The plugin is in a stable state — no slice MUST advance.
+
+## Curation log
+
+- bullet "rules/ layer is the second plugin layer alongside skills/"
+  - curated_into: [decisions/rules-layer-symlink-consumer-protocol.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Symlink-based consumer protocol"
+  - curated_into: [decisions/rules-layer-symlink-consumer-protocol.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "batuta-rule-authoring skill completes the trío" — noise (procedural)
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Auto-bootstrap rules in batuta-project-hygiene" — noise (procedural)
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "User-level memory backup in user-settings/" — noise (procedural)
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Plugin version bumped 1.2.0 → 2.3.0" — noise (release metadata)
+  - curated_at: 2026-05-05T00:38:00Z
+- finding "Windows + setup-rules.sh idempotency caveat"
+  - curated_into: [gotchas/windows-symlink-developer-mode.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- finding "Plan-file flow lessons learned" — noise (process retrospective)
+  - curated_at: 2026-05-05T00:38:00Z
+- finding "Memory bootstrap as a session-end artifact" — noise (process retrospective)
+  - curated_at: 2026-05-05T00:38:00Z
+- Changes section bullets — noise (commit log)
+  - curated_at: 2026-05-05T00:38:00Z

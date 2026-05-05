@@ -53,3 +53,28 @@ Mid-session, the operator identified a structural gap: the plugin had per-featur
 ## Next
 
 Next session entry point: `docs/plans/active/2026-04-26-global-docs-skeleton.md` @ audit chain (currently mid-GATE-2). After PR #3 merges and operator runs `/plugin update batuta-agent-skills`, the next slice is the E2E test (Phase 4.3 of the original mission: 3 calibrated prompts targeting Haiku, Sonnet, and `agent-architect` specialist creation, with token-by-model accounting and verification of the delegation chain).
+
+## Curation log
+
+- bullet "Rule #0 = three-layer enforcement"
+  - curated_into: [decisions/rule-zero-three-layer-enforcement.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Haiku tier ships as a separate agent"
+  - curated_into: [decisions/haiku-as-separate-agent-not-parameter.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "PreToolUse hook over permissions.deny"
+  - curated_into: [decisions/rule-zero-three-layer-enforcement.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Audit chain runs sequentially, not in parallel"
+  - curated_into: [decisions/audit-chain-sequential-not-parallel.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Doc graph follows the four-quadrant model"
+  - curated_into: [decisions/four-quadrant-doc-graph.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "Session-handoff protocol"
+  - curated_into: [decisions/session-handoff-protocol.draft.md]
+  - curated_at: 2026-05-05T00:38:00Z
+- bullet "GATE 3 cannot be skipped" — noise (slice-specific procedural)
+  - curated_at: 2026-05-05T00:38:00Z
+- Changes section bullets — noise (commit log, not curated knowledge)
+  - curated_at: 2026-05-05T00:38:00Z
