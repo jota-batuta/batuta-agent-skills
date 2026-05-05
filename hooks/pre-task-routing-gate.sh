@@ -1,18 +1,23 @@
 #!/usr/bin/env bash
-# pre-task-routing-gate.sh (v4.4)
+# pre-task-routing-gate.sh (v4.5)
 # PreToolUse hook for the Task tool — blocks subagent dispatch unless a
 # routing-confirmed marker exists in <project-root>/.claude/.
 #
 # Closes the discretionary gap where the agent could pick subagent vs
-# main-direct silently. With v4.4, the agent must declare routing,
-# the operator must approve, and only then write the marker.
+# main-direct silently. The agent must declare routing, the operator must
+# approve, and only then write the marker.
+#
+# v4.5 marker contract — accepts EITHER:
+#   - <project-root>/.claude/.intent-and-routing-confirmed-<ISO>  (new combined marker)
+#   - <project-root>/.claude/.routing-confirmed-<ISO>             (legacy v4.4)
+# Legacy markers are honored for one release cycle to avoid breaking in-flight
+# work; they will be removed in v4.6.
 #
 # Subagent bypass: if the dispatched Task is itself a sub-call from a
 # subagent, the agent_id will be present → bypass (matches v4.2/v4.3).
 #
-# Marker contract: <project-root>/.claude/.routing-confirmed-<ISO>
-#   - Written by intent-capture Step 6 after operator approval.
-#   - Deleted by clear-intent-marker.sh at every UserPromptSubmit.
+# Markers are written by intent-capture Step 5 (combined) on operator approval
+# and deleted by clear-intent-marker.sh at every UserPromptSubmit.
 #
 # Bypass: BATUTA_INTENT_BYPASS=1 (same env var as intent-gate; routing
 # is conceptually part of the same gate family).
@@ -59,7 +64,7 @@ fi
 marker_dir="$project_root/.claude"
 marker=""
 if [[ -d "$marker_dir" ]]; then
-  marker=$(find "$marker_dir" -maxdepth 1 -name '.routing-confirmed-*' -print -quit 2>/dev/null)
+  marker=$(find "$marker_dir" -maxdepth 1 \( -name '.intent-and-routing-confirmed-*' -o -name '.routing-confirmed-*' \) -print -quit 2>/dev/null)
 fi
 
 if [[ -n "$marker" ]]; then
@@ -67,19 +72,19 @@ if [[ -n "$marker" ]]; then
 fi
 
 cat >&2 <<EOF
-RULE violated (routing-gate, v4.4): cannot dispatch Task without operator-approved routing.
+RULE violated (routing-gate, v4.5): cannot dispatch Task without operator-approved routing.
 
-No routing-confirmed marker found at $marker_dir/.routing-confirmed-* — the agent must declare routing (subagent vs main-direct, with reason per file or scope) and wait for explicit operator approval BEFORE dispatching subagents.
+No marker found at $marker_dir/.intent-and-routing-confirmed-* (or legacy .routing-confirmed-*) — the agent must declare routing (subagent vs main-direct, with reason per file or scope) and wait for explicit operator approval BEFORE dispatching subagents.
 
-Required workflow:
-  1. Inside intent-capture Step 6, declare routing in plain language to the operator.
-  2. Operator says "dale" / "procedé" / "approved" / equivalent.
-  3. Step 6 writes the marker '.routing-confirmed-<ISO>' (analogous to .intent-confirmed).
+Required workflow (v4.5):
+  1. Inside intent-capture Step 5, present intent JSON + routing declaration in ONE combined block.
+  2. Operator says "dale" / "procedé" / "approved" / equivalent (single confirmation).
+  3. Step 5 writes the combined marker '.intent-and-routing-confirmed-<ISO>'.
   4. Then Task tool calls succeed.
 
 The marker is invalidated at the next operator turn (UserPromptSubmit clears it).
 Bypass: BATUTA_INTENT_BYPASS=1 (operator-side env var on launching shell).
 
-Rule: rules/core/intent-capture-required.md (Rule 7, v4.4)
+Rule: rules/core/intent-capture-required.md (v4.5)
 EOF
 exit 1

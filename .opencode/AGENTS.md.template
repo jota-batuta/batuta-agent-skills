@@ -24,16 +24,24 @@ NEVER skip a skill because the task seems "trivial". NEVER invoke without first 
 
 The intent gate prevents unauthorized **state mutation** (edit, write, destructive bash, deploy, push). It does NOT exist to slow down questions, audits, or analysis.
 
-### Class A — ACTION request: MUST grill before acting
+### Class A — ACTION request: MUST tier-assign and (if standard) grill before acting
 
 The user message asks the agent to **produce, modify, or destroy** a file, repo, config, deployment, branch, PR, package, or external system. Triggers (non-exhaustive): "implement", "add (feature)", "build (something new)", "fix", "refactor", "rename", "delete", "deploy", "ship", "configure", "install", "create", "edit", "set up (X infrastructure)", "remove the old", "merge", "push".
 
-Procedure:
-1. **Grill** — one concrete question per turn until ALL THREE are unambiguous: text, scope, acceptance.
-2. **Capture** — present the structured intent back to the user.
-3. **Confirm** — wait for explicit phrase: `dale`, `procedé`, `sí`, `yes go ahead`, `proceed`. NEVER assume confirmation from silence.
-4. **Declare routing** — name the subagent (`@<name>`) or "main-direct"; wait for operator approval.
-5. **Execute** — only after both confirmation and routing approval.
+Procedure (v4.5):
+
+1. **Tier assignment (MUST)** — assign `tier: "trivial"` IFF ALL FIVE conditions hold:
+   - ≤3 files touched
+   - ≤20 LOC changed total
+   - NO new control flow (no new `if` / `for` / `while` / `try` / `async`)
+   - NO new external dependency
+   - Category in: `typo`, `copy`, `css`, `rename`, `comment`, `string-literal`, `version-bump`
+
+   Else `tier: "standard"`. NEVER mis-classify standard work as trivial to skip the grill.
+2. **Grill (standard tier ONLY — SKIPPED for trivial)** — one concrete question per turn until ALL THREE are unambiguous: text, scope, acceptance.
+3. **Capture + present in ONE block (MUST)** — present the structured intent back to the user TOGETHER with the routing declaration (per file or per ask: subagent `@<name>` or `main-direct`). For trivial tier, present a one-line summary. Trivial tier routing is forced to `main-direct`. NEVER present intent and routing in separate turns.
+4. **Single confirmation (MUST)** — wait for ONE explicit phrase: `dale`, `procedé`, `sí`, `yes go ahead`, `proceed`. The single approval covers BOTH intent and routing. NEVER request a second approval; the v4.4 double round-trip is deprecated.
+5. **Persist + execute** — for **standard tier**, write `docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` to disk (NOT committed individually — bundles at slice close per §5). For **trivial tier**, NEVER create a `docs/intents/` file; the intent is recorded as a one-line entry in the slice's session journal at close. Then execute per the declared routing. NEVER write a `.intent-and-routing-confirmed-*` marker in opencode — that file is meaningful only to Claude Code's PreToolUse hooks and becomes orphan state in opencode.
 
 ### Class B — ANALYSIS / LOOKUP / AUDIT request: act directly
 
@@ -54,7 +62,7 @@ If unclear whether A or B (e.g. "the endpoint returns 500" — analysis or fix?)
 
 ### Continuation messages
 
-"dale", "yes", "go ahead", "proceed" to an intent already presented THIS turn skip Step 1 and go directly to Step 5.
+"dale", "yes", "go ahead", "proceed" to an intent already presented THIS turn skip Steps 1–3 and go directly to Step 5.
 
 ### NEVER
 
@@ -83,7 +91,8 @@ For any architecture, data-model, flow, stack, or framework decision:
 
 ## 5. Git hygiene (MUST)
 
-- Commit after every meaningful change. NEVER end a session with a dirty tree.
+- Commit after every meaningful change to **code**. Discovery artifacts (`docs/intents/<id>.md`, `docs/plans/active/<file>.md`, `docs/sessions/<file>.md`) are NOT meaningful changes by themselves — they bundle into the slice-close commit alongside the code that motivated them, OR into a single final `docs: close slice <id>` commit if the slice ended without code.
+- NEVER commit `docs/intents/<id>.md` as a standalone commit. NEVER end a session with a dirty tree of code; uncommitted discovery artifacts are expected mid-slice and survive compaction by their presence on disk.
 - `git add <specific files>`. NEVER `git add -A`/`git add .` outside fresh scaffolds.
 - Commit messages describe the WHY.
 
@@ -121,12 +130,14 @@ Before `edit`, `write`, mutating `bash`, `delete`, or destructive primitives:
 
 1. ☐ Did I check for an applicable skill (§1)?
 2. ☐ Is this Class A (mutates state)? If yes → continue. If Class B → this checklist does NOT apply.
-3. ☐ Is there a confirmed Class A intent? Can I quote the confirming phrase?
-4. ☐ Did I declare and get approval for routing?
-5. ☐ External library? `// Source:` citation present?
-6. ☐ Non-trivial decision? Listed ≥3 approaches?
-7. ☐ Destructive command? Explicit operator confirmation?
-8. ☐ Will this commit secrets/PII? If yes, STOP.
+3. ☐ Did I assign a tier (trivial vs standard)? Can I cite which conditions matched?
+4. ☐ If standard tier → did I grill until scope/acceptance were unambiguous?
+5. ☐ Is there a confirmed Class A intent with intent+routing presented in ONE block? Can I quote the confirming phrase?
+6. ☐ For standard tier → did I write `docs/intents/<id>.md` to disk (without committing)?
+7. ☐ External library? `// Source:` citation present?
+8. ☐ Non-trivial decision? Listed ≥3 approaches?
+9. ☐ Destructive command? Explicit operator confirmation?
+10. ☐ Will this commit secrets/PII? If yes, STOP.
 
 Any unchecked box (when Class A) → STOP. Ask. Do not proceed.
 
