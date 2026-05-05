@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-# pre-edit-intent-gate.sh (v4.2)
+# pre-edit-intent-gate.sh (v4.5)
 # PreToolUse hook — enforces `rules/core/intent-capture-required.md`.
 # Blocks Write/Edit/MultiEdit AND Bash on implementation paths when no
 # intent-confirmed marker exists in the project's .claude/ directory.
+#
+# v4.5 marker contract — accepts EITHER:
+#   - `<project-root>/.claude/.intent-and-routing-confirmed-<ISO>`  (new combined marker)
+#   - `<project-root>/.claude/.intent-confirmed-<ISO>`              (legacy v4.2-v4.4)
+# Legacy markers are honored for one release cycle to avoid breaking in-flight
+# work; they will be removed in v4.6.
 #
 # v4.2 changes (vs v4.1):
 #   - Bash matcher added: ALL Bash tool calls require a marker (no allow/deny lists).
@@ -10,9 +16,8 @@
 #     `clear-intent-marker.sh` UserPromptSubmit hook invalidates markers at each
 #     operator turn boundary.
 #
-# Marker contract: `<project-root>/.claude/.intent-confirmed-<ISO>`
-#   - Written by `skills/intent-capture` Step 5 on operator confirmation.
-#   - Deleted by `clear-intent-marker.sh` at the next UserPromptSubmit.
+# Markers are written by `skills/intent-capture` Step 5 on operator confirmation
+# and deleted by `clear-intent-marker.sh` at the next UserPromptSubmit.
 #
 # Exempt paths for Edit/Write (no marker required):
 #   .claude/**, docs/**, **/CLAUDE.md, **/MEMORY.md, memory/**, .gitignore,
@@ -88,7 +93,7 @@ find_project_root_and_marker() {
   local marker_dir="$project_root/.claude"
   if [[ -d "$marker_dir" ]]; then
     local f
-    f=$(find "$marker_dir" -maxdepth 1 -name '.intent-confirmed-*' -print -quit 2>/dev/null)
+    f=$(find "$marker_dir" -maxdepth 1 \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
     if [[ -n "$f" ]]; then
       marker_found="1"
     fi
@@ -118,7 +123,7 @@ if [[ "$tool_name" == "Bash" ]]; then
   marker_dir="$project_root/.claude"
   fresh_marker=""
   if [[ -d "$marker_dir" ]]; then
-    fresh_marker=$(find "$marker_dir" -maxdepth 1 -name '.intent-confirmed-*' -print -quit 2>/dev/null)
+    fresh_marker=$(find "$marker_dir" -maxdepth 1 \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
   fi
 
   if [[ -n "$fresh_marker" ]]; then
@@ -126,9 +131,9 @@ if [[ "$tool_name" == "Bash" ]]; then
   fi
 
   cat >&2 <<EOF
-RULE violated (intent-capture gate, v4.2): cannot execute Bash without a confirmed intent.
+RULE violated (intent-capture gate, v4.5): cannot execute Bash without a confirmed intent.
 
-No intent marker found at $marker_dir/.intent-confirmed-* — the gate now applies to ALL Bash tool calls (gate-all-Bash, no allow-list).
+No marker found at $marker_dir/.intent-and-routing-confirmed-* (or legacy .intent-confirmed-*) — the gate applies to ALL Bash tool calls (gate-all-Bash, no allow-list).
 
 Required workflow before any Bash tool call:
 
@@ -215,7 +220,7 @@ fi
 marker_dir="$project_root/.claude"
 fresh_marker=""
 if [[ -d "$marker_dir" ]]; then
-  fresh_marker=$(find "$marker_dir" -maxdepth 1 -name '.intent-confirmed-*' -print -quit 2>/dev/null)
+  fresh_marker=$(find "$marker_dir" -maxdepth 1 \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
 fi
 
 if [[ -n "$fresh_marker" ]]; then
@@ -223,10 +228,10 @@ if [[ -n "$fresh_marker" ]]; then
 fi
 
 cat >&2 <<EOF
-RULE violated (intent-capture gate, v4.2): cannot edit implementation file:
+RULE violated (intent-capture gate, v4.5): cannot edit implementation file:
   $file_path
 
-No intent marker found at $marker_dir/.intent-confirmed-* — markers are invalidated at the start of each operator turn (UserPromptSubmit hook).
+No marker found at $marker_dir/.intent-and-routing-confirmed-* (or legacy .intent-confirmed-*) — markers are invalidated at the start of each operator turn (UserPromptSubmit hook).
 
 Required workflow before editing implementation files:
 

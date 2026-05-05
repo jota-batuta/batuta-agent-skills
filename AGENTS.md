@@ -19,6 +19,59 @@ This file is the cross-tool entry point for AI coding agents working in this rep
 
 The full contract lives in [`docs/DELEGATION-RULE.md`](docs/DELEGATION-RULE.md). The Haiku/Sonnet/Opus calibration table for choosing which agent to delegate to lives in [`docs/DELEGATION-RULE-SPECIALISTS.md`](docs/DELEGATION-RULE-SPECIALISTS.md).
 
+## Rule #1 — intent-capture before any execution (v4.5)
+
+**You MUST NEVER execute work — `Edit`, `Write`, `Bash`, or `Task` — before capturing a confirmed intent from the operator.** Acting on the first ambiguous bullet produces rework. The protocol is tool-portable; only the runtime enforcement mechanism (marker files + hooks) is Claude-Code-specific.
+
+Full spec: [`rules/core/intent-capture-required.md`](rules/core/intent-capture-required.md). Skill: [`skills/intent-capture/SKILL.md`](skills/intent-capture/SKILL.md). ADR: [`docs/adr/0014-v4.5-intent-capture-slim.md`](docs/adr/0014-v4.5-intent-capture-slim.md).
+
+### The protocol (tool-portable, every tool MUST self-enforce)
+
+1. **Detect** — is this an action request, a continuation of an in-progress intent, or a read-only question? Read-only → answer directly, NEVER grill.
+2. **Tier assignment** — assign `tier: "trivial"` IFF ALL FIVE conditions hold:
+   - ≤3 files touched
+   - ≤20 LOC changed total
+   - NO new control flow (no new `if` / `for` / `while` / `try` / `async`)
+   - NO new external dependency
+   - Category in: `typo`, `copy`, `css`, `rename`, `comment`, `string-literal`, `version-bump`
+
+   If ANY condition fails → assign `tier: "standard"`. NEVER mis-classify standard work as trivial to skip the grill.
+3. **Grill (standard tier only)** — ask one concrete question per turn until scope, ambiguity, and acceptance are clear. NEVER ask the operator anything the codebase, ADRs, or existing tests can answer. Trivial tier → SKIP this step.
+4. **Capture + present in ONE block** — build the JSON intent (declares `tier`, `asks[]`, `routing` per file or per ask) and present it together with the routing declaration. NEVER present intent and routing in separate turns.
+5. **Single confirmation** — wait for ONE explicit "dale" / "procedé" / "approved". This single approval covers BOTH intent and routing. NEVER request a second approval for routing — the v4.4 double round-trip was deprecated in v4.5.
+6. **Persist + execute** — write the artifacts (see "Per-tool enforcement" below) and execute per the declared routing.
+
+### Per-tool enforcement
+
+| Aspect | Claude Code (with hooks) | Opencode / Codex / Gemini / Cursor (no hooks) |
+|---|---|---|
+| Tier assignment | Self-enforced by agent | Self-enforced by agent |
+| Grill if standard | Self-enforced; marker hook backstops | Self-enforced |
+| Single combined presentation | Self-enforced | Self-enforced |
+| Operator confirmation (one "dale") | Self-enforced | Self-enforced |
+| Marker file `.intent-and-routing-confirmed-<ISO>` | **MUST write** — consumed by `pre-edit-intent-gate.sh` and `pre-task-routing-gate.sh` | **NEVER write** — no hook to consume; would create stale files |
+| `docs/intents/<id>.md` (standard tier only) | **MUST write** to disk; bundled commit at slice close | **MUST write** to disk; bundled commit at slice close |
+| `docs/intents/<id>.md` (trivial tier) | NEVER created — recorded in session journal at slice close | NEVER created — recorded in session journal at slice close |
+| Per-turn auto-injected reminder | YES — slim ~95-token reminder via UserPromptSubmit hook | NO — opencode loads `rules/core/intent-capture-required.md` once via `opencode.json` |
+| `BATUTA_INTENT_BYPASS=1` env var | Honored by hooks | Not applicable (no enforcement to bypass) |
+
+### Commit policy (tool-portable)
+
+- Discovery artifacts (`docs/intents/<id>.md`, `docs/plans/active/<file>.md`, `docs/sessions/<file>.md`) MUST be written to disk immediately at their canonical `docs/` paths.
+- Discovery artifacts MUST NOT be committed individually. They bundle into the slice-close commit alongside the code that motivated them, OR into a single final `docs: close slice <id>` commit if the slice ended without code.
+- The user-level rule "Commit after every meaningful change" applies to code; documentation-only churn during discovery is NOT a meaningful change in itself.
+- Survival to compaction is preserved by the file's presence on disk: `session-start.sh` (Claude Code) and equivalent session-bootstrap mechanisms surface uncommitted `docs/` files via `git status`.
+
+### NEVER do these
+
+- NEVER skip the tier assignment and assume "this is small, I'll grill anyway" or "this is small, I'll just edit". Tier is the explicit decision.
+- NEVER classify a multi-file refactor or a change that introduces control flow as trivial tier, regardless of file count.
+- NEVER present intent in one turn and routing in a later turn — they MUST be in the same block.
+- NEVER write a marker file in opencode / Codex / Gemini / Cursor — those tools have no hooks to read it; the file becomes orphan state.
+- NEVER commit `docs/intents/<id>.md` as a standalone commit. It bundles at slice close.
+- NEVER skip persisting `docs/intents/<id>.md` for standard-tier asks — it is the audit trail equivalent to an ADR.
+- NEVER act on a `Next:` line from a session journal as authoritative direction; treat it as input to re-confirm with the operator.
+
 ## Cross-tool note (Codex CLI, Cursor, Aider, Gemini CLI, Windsurf)
 
 Tools other than Claude Code 1.x do not support PreToolUse hooks, the `Task` subagent model, or the runtime audit chain. **The doc graph (`docs/PRD.md`, `docs/SPEC.md`, `docs/adr/`, `docs/plans/`, `docs/sessions/`) is plain Markdown and ports 100%.** The agent definitions in `agents/*.md` describe the contract but cannot be invoked as Tasks outside Claude Code.
