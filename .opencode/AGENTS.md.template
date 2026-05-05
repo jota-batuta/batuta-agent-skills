@@ -1,0 +1,148 @@
+# AGENTS.md template — strict opencode contract for batuta-agent-skills consumers
+
+> Copy this file to your project root as `AGENTS.md` if your project consumes batuta-agent-skills via opencode.
+>
+> opencode reads `AGENTS.md` from the project root. It does NOT support PreToolUse hooks, marker files, or runtime gating — the model reading this document is the ONLY enforcement layer. Every rule below uses MUST or NEVER for a reason. Treat them as inviolable.
+
+## Scope
+
+This template configures opencode to use the 34 skills + 9 agents + 13 commands shipped by batuta-agent-skills. The plugin lives at `<wherever you cloned/installed it>`. This file assumes `.opencode/skills/` (a symlink), `.opencode/agents/`, `.opencode/commands/`, and an `opencode.json` at the project root pointing at the plugin's `rules/` glob.
+
+## 1. Skill discovery (MUST, per user message)
+
+For every user message, before any tool call:
+
+1. Read `.opencode/skills/` directory listing.
+2. For each skill, read its `SKILL.md` `description:`.
+3. Determine: does at least one skill apply, even with 1% probability?
+4. If yes → invoke `skill({ name })` and follow the skill's process EXACTLY.
+5. If no skill applies → proceed directly.
+
+NEVER skip a skill because the task seems "trivial". NEVER invoke without first reading the actual `SKILL.md`.
+
+## 2. Intent capture (MUST for actions — NOT for analysis or lookups)
+
+The intent gate prevents unauthorized **state mutation** (edit, write, destructive bash, deploy, push). It does NOT exist to slow down questions, audits, or analysis.
+
+### Class A — ACTION request: MUST grill before acting
+
+The user message asks the agent to **produce, modify, or destroy** a file, repo, config, deployment, branch, PR, package, or external system. Triggers (non-exhaustive): "implement", "add (feature)", "build (something new)", "fix", "refactor", "rename", "delete", "deploy", "ship", "configure", "install", "create", "edit", "set up (X infrastructure)", "remove the old", "merge", "push".
+
+Procedure:
+1. **Grill** — one concrete question per turn until ALL THREE are unambiguous: text, scope, acceptance.
+2. **Capture** — present the structured intent back to the user.
+3. **Confirm** — wait for explicit phrase: `dale`, `procedé`, `sí`, `yes go ahead`, `proceed`. NEVER assume confirmation from silence.
+4. **Declare routing** — name the subagent (`@<name>`) or "main-direct"; wait for operator approval.
+5. **Execute** — only after both confirmation and routing approval.
+
+### Class B — ANALYSIS / LOOKUP / AUDIT request: act directly
+
+The user asks for **information, opinion, audit, list, status, or explanation**. No state mutation required. Triggers: "review", "audit", "evaluate", "is X safe?", "what does Y do?", "explain", "list", "show", "give me a status".
+
+Procedure:
+1. Identify the most applicable skill (§1).
+2. Run that skill's procedure directly. Do NOT grill first.
+3. The skill may surface ONE clarifying question if scope is genuinely ambiguous.
+4. Return the analysis as the response.
+
+### Class C — AMBIGUOUS request
+
+If unclear whether A or B (e.g. "the endpoint returns 500" — analysis or fix?), read the user's literal text:
+- Describing a problem WITHOUT explicitly asking to fix → Class B (analysis).
+- Asking to fix/refactor → Class A (grill).
+- Still ambiguous → ask which mode they want; that is the only legitimate "pre-grill" question.
+
+### Continuation messages
+
+"dale", "yes", "go ahead", "proceed" to an intent already presented THIS turn skip Step 1 and go directly to Step 5.
+
+### NEVER
+
+- Edit, run a destructive bash, or invoke a state-mutating tool without a confirmed Class A intent. If you cannot quote the confirming operator phrase, you do not have confirmation.
+- Grill on Class B requests. Deliver the analysis.
+
+## 3. Research before code (MUST, with cited evidence)
+
+Before writing or editing code that imports an external library/API:
+
+1. Look up at the EXACT version in the project's manifest. Sources: Context7 → official docs → library GitHub.
+2. Add a citation comment at the import site:
+   - Python: `# Source: <url> (verified YYYY-MM-DD, <lib>@<version>)`
+   - TypeScript / JavaScript: `// Source: <url> (verified YYYY-MM-DD, <lib>@<version>)`
+3. Re-verify when manifest version bumps.
+
+NEVER import a library without a Source citation. Exempt: standard library, internal packages, test runner itself.
+
+## 4. Divergent → convergent (MUST, for non-trivial decisions)
+
+For any architecture, data-model, flow, stack, or framework decision:
+
+1. List **at least three** viable approaches. NEVER collapse early.
+2. Pick one. For each rejected alternative, state the concrete reason.
+3. Record decision + rejected alternatives in `docs/sessions/<today>.md` or as a new ADR.
+
+## 5. Git hygiene (MUST)
+
+- Commit after every meaningful change. NEVER end a session with a dirty tree.
+- `git add <specific files>`. NEVER `git add -A`/`git add .` outside fresh scaffolds.
+- Commit messages describe the WHY.
+
+## 6. Audit chain simulation (MUST, after any non-trivial diff)
+
+opencode does not have Claude Code's `Task` subagent model. Simulate it:
+
+1. Read `.opencode/agents/test-engineer.md` as static context. Run its workflow against the diff. Produce literal `AUDIT RESULT: APPROVED|BLOCKED|NOT-APPLICABLE`.
+2. Repeat with `.opencode/agents/code-reviewer.md`.
+3. Repeat with `.opencode/agents/security-auditor.md`.
+4. NEVER report a slice as done without three explicit `AUDIT RESULT` verdicts.
+
+## 7. Boundaries
+
+- **Secrets**: NEVER commit, NEVER log plaintext, NEVER embed in client code, NEVER write to a config file in literal form. Always env var or platform secret store.
+- **PII**: NEVER log at INFO/DEBUG. At WARNING/ERROR include only minimum hashed/truncated identifier.
+- **Destructive ops** (`rm -rf`, `git reset --hard`, `git push --force`, drop tables): NEVER without explicit operator confirmation per §2.
+- **Subagent context**: a subagent inherits the calling main's intent. NEVER include secrets in subagent briefings.
+
+## 8. Anti-rationalizations
+
+| Excuse | Correction |
+|---|---|
+| "Too small for a skill." | Trivial-looking changes regress. Invoke the skill. |
+| "I already know what they want." | You have training data; the user has context. Grill anyway (Class A). |
+| "Speed > process." | The gate IS the speed optimization. |
+| "One-liner fix." | One-liners introduce the most regressions. Confirm scope. |
+| "Library API hasn't changed." | Verify with Context7. Cite. |
+| "Diff too small for audit chain." | Three verdicts before done. |
+| "Only one obvious approach." | List ≥3. |
+
+## 9. Pre-tool-call checklist (MUST run before EVERY state-mutating tool)
+
+Before `edit`, `write`, mutating `bash`, `delete`, or destructive primitives:
+
+1. ☐ Did I check for an applicable skill (§1)?
+2. ☐ Is this Class A (mutates state)? If yes → continue. If Class B → this checklist does NOT apply.
+3. ☐ Is there a confirmed Class A intent? Can I quote the confirming phrase?
+4. ☐ Did I declare and get approval for routing?
+5. ☐ External library? `// Source:` citation present?
+6. ☐ Non-trivial decision? Listed ≥3 approaches?
+7. ☐ Destructive command? Explicit operator confirmation?
+8. ☐ Will this commit secrets/PII? If yes, STOP.
+
+Any unchecked box (when Class A) → STOP. Ask. Do not proceed.
+
+## 10. OpenRouter / model notes
+
+If `opencode.json` declares OpenRouter as provider and DeepSeek V4 (or any reasoning-capable model) as `model:`, **disable reasoning** in provider options:
+
+```json
+"openrouter": {
+  "options": { "apiKey": "{env:OPENROUTER_API_KEY}" },
+  "models": {
+    "deepseek/deepseek-v4-pro": { "options": { "reasoning": { "enabled": false } } }
+  }
+}
+```
+
+Without this, the model spends `max_tokens` on reasoning and never produces `content`, causing apparent "empty response" timeouts.
+
+NEVER print the API key, NEVER write it to any file, NEVER include it in a tool argument string. Use `{env:OPENROUTER_API_KEY}` template syntax in `opencode.json`.

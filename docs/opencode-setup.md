@@ -32,20 +32,41 @@ This more closely matches how Claude Code behaves in practice, where skills are 
 
 ## Installation
 
-1. Clone the repository:
+1. Clone the repository (or install via `/plugin install batuta-agent-skills@batuta-agent-skills` in Claude Code; both leave a checkout opencode can read):
 
 ```bash
 git clone https://github.com/jota-batuta/batuta-agent-skills.git
+cd batuta-agent-skills
 ```
 
-2. Open the project in OpenCode.
+2. **Set the OpenRouter API key out-of-repo and source it into the env**:
 
-3. Ensure the following files are present in your workspace:
+```bash
+echo 'YOUR_OPENROUTER_API_KEY_HERE' > ~/.openrouter-key && chmod 600 ~/.openrouter-key
+# Replace YOUR_OPENROUTER_API_KEY_HERE with your actual key from
+# https://openrouter.ai/settings/keys (paste it inside the quotes).
+export OPENROUTER_API_KEY=$(cat ~/.openrouter-key)
+```
 
-- `AGENTS.md` (root)
-- `skills/` directory
+NEVER paste the literal key into `opencode.json`. The shipped `opencode.json` uses `{env:OPENROUTER_API_KEY}` template syntax.
 
-No additional installation is required.
+3. Open the project in opencode:
+
+```bash
+opencode
+```
+
+4. Verify the integration is present:
+
+- `AGENTS.md` (root) — cross-tool entry point
+- `skills/` — canonical skill source (the symlink target for `.opencode/skills/`)
+- `.opencode/skills/` — symlink → `../skills/`
+- `.opencode/agents/*.md` (9) — opencode-shaped agent frontmatter
+- `.opencode/commands/*.md` (13) — opencode-shaped slash commands
+- `opencode.json` (root) — provider/model/permission/instructions
+- `.opencode/AGENTS.md.template` — strict opencode contract; copy to your project root as `AGENTS.md` if you are running this plugin from a CONSUMER repo.
+
+For a consumer repo (your own project that wants to adopt the plugin's interop layer), see "Consumer setup" below.
 
 ---
 
@@ -149,11 +170,71 @@ These rules are enforced via `AGENTS.md`.
 
 ---
 
+## Consumer setup (your project consumes the plugin via opencode)
+
+If your project lives at `~/myapp/` and the plugin clone at `~/batuta-agent-skills/`:
+
+```bash
+cd ~/myapp
+mkdir -p .opencode
+ln -sf ~/batuta-agent-skills/skills .opencode/skills
+ln -sf ~/batuta-agent-skills/.opencode/agents .opencode/agents
+ln -sf ~/batuta-agent-skills/.opencode/commands .opencode/commands
+cp ~/batuta-agent-skills/.opencode/AGENTS.md.template AGENTS.md
+cp ~/batuta-agent-skills/opencode.json opencode.json
+```
+
+**The shipped `opencode.json` uses paths relative to the plugin clone, not your project. If you copy it verbatim, opencode will fail to load the rules.** Edit the `instructions` array to point at the plugin's `rules/` with the absolute path under your clone. Replace:
+
+```json
+  "instructions": [
+    "./rules/core/code-style.md",
+    "./rules/core/secrets-and-pii.md",
+    ...
+```
+
+with (assuming the plugin lives at `~/batuta-agent-skills/`):
+
+```json
+  "instructions": [
+    "/home/you/batuta-agent-skills/rules/core/code-style.md",
+    "/home/you/batuta-agent-skills/rules/core/secrets-and-pii.md",
+    "/home/you/batuta-agent-skills/rules/core/research-first-citations.md",
+    "/home/you/batuta-agent-skills/rules/core/intent-capture-required.md",
+    "/home/you/batuta-agent-skills/rules/core/model-routing.md",
+    "/home/you/batuta-agent-skills/rules/core/no-hardcoded-magic.md",
+    "/home/you/batuta-agent-skills/rules/authoring/skill-authoring-required.md",
+    "/home/you/batuta-agent-skills/rules/authoring/agent-authoring-required.md",
+    "/home/you/batuta-agent-skills/rules/integrations/code-graph-usage.md"
+  ]
+```
+
+Then `opencode` from `~/myapp/` will load the 34 skills (via symlink), 9 agents, 13 commands, the strict AGENTS.md contract, AND the engineering invariants from `rules/`.
+
+## OpenRouter / model considerations (validated under DeepSeek V4 Pro)
+
+- `opencode.json` ships with `reasoning: { enabled: false }` for DeepSeek V4 Pro and Flash. **Do not remove it.** Without this, the model spends `max_tokens` producing chain-of-thought and never emits `content`, making opencode appear to hang and producing 0-byte responses on `opencode run --format json`. This was observed during the IC-009 sweep and fixed in IC-010.
+- The strict `.opencode/AGENTS.md.template` distinguishes **Class A** (action — MUST grill before mutation) from **Class B** (analysis/lookup — answer directly). Without that distinction, the model gates EVERY message behind intent capture and the downstream skills never get to run. This was the dominant failure mode in the v1 IC-009 sweep.
+- API key MUST come from `~/.openrouter-key` (chmod 600) sourced into `OPENROUTER_API_KEY`. The literal key NEVER lives in `opencode.json`. Use `{env:OPENROUTER_API_KEY}` template syntax.
+- Default models in shipped `opencode.json`:
+  - `model: openrouter/deepseek/deepseek-v4-pro` (1M context, ~$0.435 / $0.87 per Mtok)
+  - `small_model: openrouter/deepseek/deepseek-v4-flash` (1M context, ~$0.14 / $0.28)
+  - Kimi K2.6 (`openrouter/moonshotai/kimi-k2.6`, 256K context) is the documented fallback on rate-limit/outage. **The fallback is a manual swap** — edit `opencode.json` `model:` to `openrouter/moonshotai/kimi-k2.6` if DeepSeek is unavailable; opencode does not auto-failover between providers.
+
+### Note on the `provider.openrouter.models` block (looks inconsistent but is correct)
+
+In the shipped `opencode.json`:
+
+- The top-level `model:` and `small_model:` use the **global ID prefix** `openrouter/<vendor>/<model>` (e.g. `openrouter/deepseek/deepseek-v4-pro`).
+- The `provider.openrouter.models.<key>` block uses the **provider-scoped slug** without the `openrouter/` prefix (e.g. `deepseek/deepseek-v4-pro`).
+
+Both forms are correct in their respective scopes. Do NOT "fix" the provider block to match the top-level — that would break the per-model `reasoning: { enabled: false }` override and the model would resume eating `max_tokens` on chain-of-thought.
+
 ## Limitations
 
-- No native slash commands (handled via intent mapping instead)
-- No plugin system (handled via prompt + structure)
-- Skill invocation depends on model compliance
+- No native PreToolUse hooks (Claude-Code-only). The 9 bash hooks under `hooks/` do NOT run in opencode. The strict AGENTS.md contract compensates: the model is the only enforcement layer. If you need runtime gating on Edit/Write/Bash, run in Claude Code.
+- No native slash commands (handled via intent mapping). The shipped `.opencode/commands/` provides the same lifecycle but invocation is through opencode's built-in `/<name>` syntax with the body of each command as the prompt template.
+- Skill invocation depends on model compliance with `AGENTS.md` §1. Validated under DeepSeek V4 Pro: skill tool primitive IS invoked when reasoning is disabled and timeouts are sufficient (≥240s for first-prompt warm-up).
 
 Despite these, the workflow closely matches Claude Code in practice.
 
