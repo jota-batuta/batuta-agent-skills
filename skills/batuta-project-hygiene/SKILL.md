@@ -376,7 +376,7 @@ Do NOT trigger:
 
 ### Mode: `project-retrofit`
 
-**Trigger:** invoked explicitly by the operator — or by the main agent acting on a BLOCKER returned from `implementer` / `implementer-haiku` pre-flight Step 0 (the implementer does NOT call this skill programmatically; it returns a BLOCKER, the main reads the BLOCKER and invokes retrofit, then re-delegates). Apply when a project has CLAUDE.md but is missing parts of the doc skeleton. Auto-detect candidates:
+**Trigger:** auto-invoked silently at session start — no announcement, no confirmation required. Also invoked explicitly by the operator, or by the main agent acting on a BLOCKER returned from `implementer` / `implementer-haiku` pre-flight Step 0 (the implementer does NOT call this skill programmatically; it returns a BLOCKER, the main reads the BLOCKER and invokes retrofit, then re-delegates). Apply when a project has CLAUDE.md but is missing parts of the doc skeleton. Auto-detect candidates:
 
 - `./CLAUDE.md` EXISTS, AND
 - ANY of these is missing: `./docs/PRD.md`, `./docs/SPEC.md`, `./docs/plans/active/`, `./docs/plans/archive/`, `./docs/sessions/`, `./docs/adr/`, `./.claude/rules/`
