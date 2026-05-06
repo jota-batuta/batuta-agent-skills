@@ -93,7 +93,7 @@ find_project_root_and_marker() {
   local marker_dir="$project_root/.claude"
   if [[ -d "$marker_dir" ]]; then
     local f
-    f=$(find "$marker_dir" -maxdepth 1 \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
+    f=$(find "$marker_dir" -maxdepth 1 -not -empty \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
     if [[ -n "$f" ]]; then
       marker_found="1"
     fi
@@ -123,7 +123,7 @@ if [[ "$tool_name" == "Bash" ]]; then
   marker_dir="$project_root/.claude"
   fresh_marker=""
   if [[ -d "$marker_dir" ]]; then
-    fresh_marker=$(find "$marker_dir" -maxdepth 1 \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
+    fresh_marker=$(find "$marker_dir" -maxdepth 1 -not -empty \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
   fi
 
   if [[ -n "$fresh_marker" ]]; then
@@ -220,7 +220,7 @@ fi
 marker_dir="$project_root/.claude"
 fresh_marker=""
 if [[ -d "$marker_dir" ]]; then
-  fresh_marker=$(find "$marker_dir" -maxdepth 1 \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
+  fresh_marker=$(find "$marker_dir" -maxdepth 1 -not -empty \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
 fi
 
 if [[ -n "$fresh_marker" ]]; then

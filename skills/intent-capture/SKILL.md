@@ -30,7 +30,13 @@ attribution: Grilling pattern derived from mattpocock/skills/grill-with-docs (ht
 
 Identify whether the operator message is an action request or read-only. If read-only → exit, answer directly. If action → proceed to Step 1b (tier).
 
-**Per-turn invariant (v4.5):** every operator turn arrives with a clean slate — the `clear-intent-marker.sh` UserPromptSubmit hook invalidated any prior marker AND emitted a slim system-reminder via `hookSpecificOutput.additionalContext` that authoritatively triggers this skill. Treat that injected reminder as the canonical signal, not your own pattern-matching of operator words. The single exception is short confirmations of an intent already in progress this turn ("sí", "dale", "procedé") — those do not start a new grill, they continue Step 5.
+**Per-turn invariant (v4.6):** every operator turn arrives with a clean slate —
+`clear-intent-marker.sh` invalidated any prior marker and injected a routing
+classifier (~25 tokens). The agent classifies (read-only vs action), resolves
+the six dimensions (objective, done, scope, constraints, reversibility, safety)
+from code/context, proposes what it can, and asks only what it cannot derive.
+The operator validates — never fills from scratch. Short confirmations of an
+intent already in progress ("sí", "dale", "procedé") continue Step 5.
 
 #### Step 1b: Tier assignment (trivial vs standard)
 

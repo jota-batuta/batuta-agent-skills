@@ -9,13 +9,30 @@ This rule is derived from the operator's global `~/.claude/CLAUDE.md` "Intent ca
 - Trivial tier introduced — mechanical threshold skips the grill on atomic / cosmetic changes.
 - Single combined confirmation — intent + routing approved together via one "dale", recorded in one `.intent-and-routing-confirmed-<ISO>` marker.
 - Discovery commits bundle at slice close — `docs/intents/<id>.md`, plans, and session journals are written immediately but committed bundled with the slice's code, not as standalone commits.
-- Slim auto-injected reminder — ~600 → ~95 tokens per turn (Claude Code only).
+- Enforcement via routing classifier (~25 tokens per turn) + PreToolUse gates — no static rule injection.
 
 ## Inviolable rules
 
 1. **Tier assignment** — before any `Edit`/`Write`/`Bash`/`Task` on an implementation path, the agent (main or subagent acting as main) MUST assign a tier:
    - **Trivial** — assigned IFF ALL FIVE conditions hold: ≤3 files touched; ≤20 LOC changed total; no new control flow (no new `if`/`for`/`while`/`try`/`async`); no new external dependency; category in `typo`/`copy`/`css`/`rename`/`comment`/`string-literal`/`version-bump`. The agent MAY skip the grill (Step 2) and present a one-line summary at Step 4.
    - **Standard** — assigned when ANY trivial condition fails. Full grill MUST run.
+
+1bis. **Dimensional routing** — on every action request, the agent resolves six
+dimensions from the code and context, proposes what it can, and asks only what
+it cannot derive:
+
+| Dimension      | Example resolution                                    |
+|----------------|-------------------------------------------------------|
+| Objective      | "change #red → #0066cc in Button.tsx:42"              |
+| Done           | "button renders blue"                                 |
+| Scope          | "Button.tsx only, no other components"                |
+| Constraints    | "no new dependencies"                                 |
+| Reversibility  | "git revert, no shared state"                         |
+| Safety         | "no PII, no auth, no external services"               |
+
+All resolved → propose and confirm in one block. Any unresolved → propose what
+is known, ask about the rest. The operator validates or corrects — never fills
+from scratch.
 
 2. **Capture and confirm** — the agent MUST complete the `intent-capture` skill workflow end-to-end (Steps 1–6: Detect tier → Grill if standard → Capture → Present → Confirm → Execute). Step 5 produces a JSON intent object with `status: "confirmed"` and the operator's explicit approval, with `tier` declared.
 
@@ -27,13 +44,18 @@ This rule is derived from the operator's global `~/.claude/CLAUDE.md` "Intent ca
 
 6. **Bash gate scope** — the gate applies to ALL `Bash` tool calls on the main agent. There is no allow-list of read-only commands and no deny-list of mutating patterns — distinguishing read-only from mutating in shell is heuristic and fragile. Gate everything; for genuinely trivial operations (interactive exploration without an action plan), the operator launches Claude Code with `BATUTA_INTENT_BYPASS=1`.
 
-7. **Auto-injection (Claude Code only)** — the `clear-intent-marker.sh` hook MUST emit a slim system-reminder (~95 tokens) via `hookSpecificOutput.additionalContext` on every operator turn. The reminder authoritatively triggers `intent-capture` and points to this file for full protocol detail. Auto-injection closes the gap where an agent could respond entirely in text (no tool calls) and never grill, or where the agent's pattern-matching of operator words misses an action request.
+7. **Enforcement architecture (Claude Code)** — three mechanisms, no static rule injection:
+   (a) routing classifier injected per turn via UserPromptSubmit (~25 tokens),
+   (b) PreToolUse hooks that block Edit/Write/Bash/Task without a valid marker,
+   (c) `clear-intent-marker.sh` that invalidates markers at each turn boundary.
 
 8. **Routing declaration in same block as intent** — Step 4 of `intent-capture` MUST present the routing decision (per file or per ask, subagent vs main-direct, with reason) in the SAME block as the intent. The operator's single "dale" approves both. Trivial tier is forced to `main-direct` routing — no subagent allowed. **Routing decisions are NOT at agent discretion**: declaring them, getting explicit approval, and the runtime gate together close the discretion gap.
 
 9. **Persistence (standard tier only)** — Step 5 MUST write the persisted record at `<project-root>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` for **standard tier** asks. The file is written to disk immediately but **NOT committed individually** — it bundles into the slice-close commit (Lever 4). For **trivial tier** asks, no `docs/intents/` file is created; the intent is recorded as a one-line entry in the slice's session journal at close. The marker file is written for both tiers.
 
 10. **Commit bundling** — discovery artifacts (`docs/intents/<id>.md`, `docs/plans/active/<file>.md`, `docs/sessions/<file>.md`) are written to their canonical `docs/` paths immediately but committed BUNDLED with the slice's code in the slice-close commit. The user-level rule "Commit after every meaningful change" applies to code; documentation-only churn during discovery is not a meaningful change in itself — it becomes meaningful when bundled with the code that motivated it. Survival to compaction is preserved by the file's presence on disk (`session-start.sh` surfaces uncommitted `docs/` files via `git status`).
+
+11. **Marker integrity** — the marker MUST contain the SHA-256 hash of the confirmed intent JSON. An empty marker (e.g. from `touch`) is rejected by `pre-edit-intent-gate.sh` via `-not -empty`.
 
 ## Tool-portable invariants vs Claude-Code-specific enforcement
 
@@ -50,7 +72,7 @@ The marker mechanism (`.intent-and-routing-confirmed-*` files, hook gating) is *
 | Marker write (Step 5) | **Required** — consumed by hooks | **Skipped** — no hooks to consume it |
 | `docs/intents/<id>.md` write (Step 5, standard tier) | Self-enforced | Self-enforced |
 | Commit bundling (Step 6+) | Self-enforced | Self-enforced |
-| Auto-injected per-turn reminder | **Yes** (UserPromptSubmit hook) | **No** — operator-side instructions take its place |
+| Per-turn routing classifier | **Yes** (~25 tokens via UserPromptSubmit) | **No** — self-enforced |
 | `BATUTA_INTENT_BYPASS=1` env var | Honored by hooks | Not applicable (no enforcement to bypass) |
 
 ## Allowed patterns
@@ -140,6 +162,12 @@ $ git commit -m "docs(intents): IC-013 add cache"
 # Operator sends new turn at 2026-05-05T15:01:00Z
 # clear-intent-marker.sh deletes the marker on UserPromptSubmit.
 # Agent must re-confirm intent before proceeding — there is no time window, the boundary is the turn.
+```
+
+```bash
+# Bad — violates rule 11 (fabricated empty marker)
+touch .claude/.intent-and-routing-confirmed-2026-05-06T00:00:00Z
+# Hook rejects: marker is empty.
 ```
 
 ```bash
