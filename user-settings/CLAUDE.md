@@ -102,8 +102,12 @@ Engineering invariants ship in `batuta-agent-skills/rules/`. A project imports t
 
 ## Boundaries
 
-- Use subagents by specificity, not as fallback. Goal: keep main context under 50% utilization.
+-  Use subagents by specificity, not as fallback. Goal: keep main context under 50% utilization.
 - Never block the main session waiting on long-running processes — `run_in_background: true` on Bash.
 - Local `docker compose` first; cloud after local is proven.
 - Secrets, auth keys, PII: never in the repo, never in plaintext logs, never in client-side code or static build artifacts.
 - Operator help: `/help`. Feedback: github.com/anthropics/claude-code/issues.
+
+* **Simplicity first** — favor the simplest implementation that solves the problem; complexity must justify itself.
+* **Prefer simple code** — avoid premature abstraction, clever tricks, or layers that don't earn their keep.
+* **Keep code simple** — readability and directness over cleverness.
