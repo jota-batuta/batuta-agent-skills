@@ -1,20 +1,11 @@
 #!/usr/bin/env bash
-# clear-intent-marker.sh (v4.5)
-# UserPromptSubmit hook — TWO responsibilities:
-#   1. Invalidate intent-capture markers at the start of each operator turn
-#      by deleting .intent-confirmed-*, .routing-confirmed-*, and the new
-#      v4.5 .intent-and-routing-confirmed-* combined markers.
-#   2. Inject a slim (~100 token) system-reminder via additionalContext that
-#      points the agent at the canonical rule + skill. The full protocol
-#      (grill / capture / present / confirm / routing) lives in
-#      rules/core/intent-capture-required.md (loaded once via opencode.json
-#      and ~/.claude/CLAUDE.md). Slim reminder = ~500 tokens/turn savings.
+# clear-intent-marker.sh (v4.6)
+# UserPromptSubmit hook:
+#   1. Invalidate intent-capture markers at each operator turn
+#   2. Inject routing classifier (~25 tokens) — forces the model to classify
+#      (read-only vs action) and resolve dimensions before acting
 #
-# Fail-soft: any failure (jq missing, no project root, rm error) logs to
-# kb-debug.log and exits 0. UserPromptSubmit must NEVER block the session —
-# both the cleanup and the reminder are best-effort.
-#
-# Source: https://docs.claude.com/en/docs/claude-code/hooks (verified 2026-05-04, Claude Code 2.x)
+# Fail-soft: any failure logs to kb-debug.log and exits 0.
 
 set +e
 trap 'exit 0' ERR
@@ -80,33 +71,19 @@ if [[ -n "$project_root" ]]; then
   fi
 fi
 
-# ============================================================================
-# Part 2 — Inject slim system-reminder (v4.5).
-# Full protocol lives in rules/core/intent-capture-required.md.
-# ============================================================================
-
-reminder='v4.5 intent gate — markers cleared. Action request → run intent-capture skill (trivial vs standard tier per rules/core/intent-capture-required.md), present intent+routing in ONE block, on "dale" write `.intent-and-routing-confirmed-<ISO>` (both tiers). Continuation → write marker. Read-only question → answer directly. Hooks block Edit/Write/Bash/Task without the marker.'
-
-# Emit JSON output protocol for UserPromptSubmit.
-# Format: {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": "..."}}
+classifier='Classify: read-only or action? If action, resolve the 6 dimensions (objective, done, scope, constraints, reversibility, safety) from code/context — propose what you can, ask only what you cannot.'
 
 if command -v jq >/dev/null 2>&1; then
-  jq -n --arg ctx "$reminder" '{
+  jq -n --arg ctx "$classifier" '{
     "hookSpecificOutput": {
       "hookEventName": "UserPromptSubmit",
       "additionalContext": $ctx
     }
   }'
-elif command -v python3 >/dev/null 2>&1; then
-  REMINDER="$reminder" python3 -c '
-import json, os
-print(json.dumps({
-  "hookSpecificOutput": {
-    "hookEventName": "UserPromptSubmit",
-    "additionalContext": os.environ.get("REMINDER", "")
-  }
-}))
-' 2>/dev/null
+else
+  cat <<EOJSON
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"$classifier"}}
+EOJSON
 fi
 
 exit 0

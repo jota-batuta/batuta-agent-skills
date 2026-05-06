@@ -4,7 +4,7 @@ Cross-project agent behavior. Project CLAUDE.md may narrow scope but cannot cont
 
 ## Language
 
-- Conversations with operator: Spanish.
+- Conversations with operator: Spanish non verbose.
 - Artifacts (code, README, SKILL.md, commit messages, PR descriptions, ADRs, tests): English.
 - Client-facing user guides may be Spanish if the project CLAUDE.md states so.
 
@@ -27,7 +27,7 @@ For any non-trivial decision (architecture, data model, flow, stack):
 
 ## Git
 
-- Commit after every meaningful change. Never end a session with a dirty tree.
+- Commit after every meaningful change. **Discovery artifacts** (`docs/intents/<id>.md`, `docs/plans/active/<file>.md`, `docs/sessions/<file>.md`) are NOT meaningful changes by themselves — they bundle into the slice-close commit alongside the code that motivated them. Never end a session with a dirty tree of code; uncommitted discovery artifacts are expected mid-slice.
 - New project: `gh repo create` and first commit before any feature code. The repo is the project.
 - Every change → PR. Claude opens, operator merges. No `Co-Authored-By: Claude`.
 - `git add <specific files>`, never `-A` outside fresh scaffolds.
@@ -36,26 +36,28 @@ For any non-trivial decision (architecture, data model, flow, stack):
 
 Before creating any of the following files, the agent MUST invoke the corresponding skill, which writes a marker authorizing the file creation. PreToolUse hooks block the Write without a fresh marker.
 
-| Path | Skill |
-|---|---|
+| Path                               | Skill                      |
+| ---------------------------------- | -------------------------- |
 | `**/skills/**/SKILL.md` (plugin) | `batuta-skill-authoring` |
-| `**/agents/**.md` (plugin) | `batuta-agent-authoring` |
-| `<project>/.claude/agents/**.md` | `agent-architect` |
-| `**/rules/**.md` (plugin) | `batuta-rule-authoring` |
+| `**/agents/**.md` (plugin)       | `batuta-agent-authoring` |
+| `<project>/.claude/agents/**.md` | `agent-architect`        |
+| `**/rules/**.md` (plugin)        | `batuta-rule-authoring`  |
 
 Editing existing files in those paths is unrestricted. Bypass via the corresponding `BATUTA_*_BYPASS=1` env var on the launching shell. Mechanism details in `rules/authoring/`.
 
-## Intent capture (every operator turn)
+## Intent capture (every operator turn) — v4.5
 
-Before any `Edit`/`Write`/`Bash` tool call:
+Before any `Edit`/`Write`/`Bash`/`Task` tool call:
 
 1. Detect: action request / continuation / read-only question.
-2. Action → grill (one Q per turn) → capture JSON intent → present → wait for explicit operator confirmation ("dale", "procedé", "sí, go ahead").
-3. On confirm → dual-write: `<project>/.claude/.intent-confirmed-<ISO>` marker AND `<project>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` versioned record.
-4. Declare routing (subagent X vs main-direct, with reason per file or scope) → wait for operator approval.
-5. Execute.
+2. **Tier assignment** — trivial IFF ALL FIVE: ≤3 files, ≤20 LOC, no new control flow, no new dep, category in `typo`/`copy`/`css`/`rename`/`comment`/`string-literal`/`version-bump`. Else standard.
+3. Standard tier → grill (one Q per turn) until scope/acceptance clear. Trivial tier → skip grill.
+4. Capture JSON intent (declares `tier`) → present in ONE block with the routing declaration (subagent vs main-direct per file or scope).
+5. Wait for SINGLE operator confirmation ("dale", "procedé", "sí, go ahead") — covers both intent and routing.
+6. On confirm → write combined marker `<project>/.claude/.intent-and-routing-confirmed-<ISO>`. For standard tier: also write `<project>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` to disk (NOT committed individually — bundles at slice close per Git policy). For trivial tier: no `docs/intents/` file; the intent is recorded as a one-line entry in the slice's session journal.
+7. Execute.
 
-A UserPromptSubmit hook auto-injects this on every operator turn. Subagents bypass via `agent_id`. Bypass: `BATUTA_INTENT_BYPASS=1` on the launching shell. Mechanism in `rules/core/intent-capture-required.md`.
+The UserPromptSubmit hook clears markers and injects a routing classifier (~25 tokens) per turn. Subagents bypass via `agent_id`. Bypass: `BATUTA_INTENT_BYPASS=1` on the launching shell. Legacy markers `.intent-confirmed-*` and `.routing-confirmed-*` are honored for one release cycle and removed in v4.6. Full protocol in `rules/core/intent-capture-required.md` (also imported by opencode via `opencode.json`).
 
 ## Delegation
 
@@ -102,7 +104,7 @@ Engineering invariants ship in `batuta-agent-skills/rules/`. A project imports t
 
 ## Boundaries
 
--  Use subagents by specificity, not as fallback. Goal: keep main context under 50% utilization.
+- Use subagents by specificity, not as fallback. Goal: keep main context under 50% utilization.
 - Never block the main session waiting on long-running processes — `run_in_background: true` on Bash.
 - Local `docker compose` first; cloud after local is proven.
 - Secrets, auth keys, PII: never in the repo, never in plaintext logs, never in client-side code or static build artifacts.

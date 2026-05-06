@@ -71,8 +71,16 @@ for rule in "${TO_LINK[@]}"; do
   if [[ -L "$dst" ]]; then
     [[ "$(readlink "$dst")" == "$src" ]] && { SKIPPED+=("$(basename "$dst")"); continue; }
     rm "$dst"
+  elif [[ -f "$dst" ]]; then
+    if cmp -s "$src" "$dst"; then
+      SKIPPED+=("$(basename "$dst") (up-to-date copy)"); continue
+    else
+      cp "$src" "$dst" 2>/dev/null
+      COPIED+=("$(basename "$dst") (refreshed — content changed)")
+      continue
+    fi
   elif [[ -e "$dst" ]]; then
-    echo "SKIP (non-symlink file exists — remove manually): $dst" >&2; continue
+    echo "SKIP (non-regular file exists — remove manually): $dst" >&2; continue
   fi
   # Confine resolved source path to RULES_SRC (prevent path-traversal via symlink target)
   RULES_SRC_REAL="$(cd "$RULES_SRC" && pwd -P)"
