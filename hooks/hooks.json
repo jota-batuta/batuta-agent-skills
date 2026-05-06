@@ -3,23 +3,15 @@
   "hooks": {
     "SessionStart": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh"
-          }
-        ]
+        "type": "command",
+        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh"
       }
     ],
     "UserPromptSubmit": [
       {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/clear-intent-marker.sh",
-            "timeout": 5
-          }
-        ]
+        "type": "command",
+        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/clear-intent-marker.sh",
+        "timeout": 5
       }
     ],
     "PreToolUse": [
@@ -62,8 +54,7 @@
             "timeout": 5
           }
         ]
-      }
-      ,
+      },
       {
         "matcher": "Task",
         "hooks": [
