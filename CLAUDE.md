@@ -23,7 +23,7 @@ This file documents only **how we work in this repo**: conventions, rules, and t
 
 - `npm test` — Not applicable (this is a documentation project)
 - Validate: Check that all SKILL.md files have valid YAML frontmatter with name and description
-- `bash tests/v2.5-validators/run.sh` — Static contract validators for v2.5+ enforcement (audit chain scope Step 0, research-first Step 2, agent-architect baking, batuta-agent-authoring rules 5–6). Run before opening a PR that touches `agents/`, `skills/batuta-agent-authoring/`, or `docs/DELEGATION-RULE.md`. Exit 0 on all-pass; non-zero blocks merge.
+- `bash tests/v2.5-validators/run.sh` — Static contract validators for v2.5+ enforcement (audit chain scope Step 0, research-first Step 2, agent-architect baking, batuta-agent-authoring rules 5–6). Run before opening a PR that touches `agents/` or `skills/batuta-agent-authoring/`. Exit 0 on all-pass; non-zero blocks merge.
 
 ## Boundaries
 
@@ -98,7 +98,7 @@ The directory was removed in v4.0 per [`docs/adr/0013-v4.0-distillation.md`](doc
 
 Rationale: keeps the main agent's window for architecture, not for writing long inline prompts. Specialists persist in `<project>/.claude/agents/` so they are reusable across slices.
 
-See `docs/DELEGATION-RULE.md` (native delegation + post-edit audit chain; kill-switch enforcement) and `docs/DELEGATION-RULE-SPECIALISTS.md` (when and how to invoke `agent-architect`, model recommendations, promotion to user-global).
+See `rules/core/model-routing.md` (delegation model routing and calibration).
 
 ---
 

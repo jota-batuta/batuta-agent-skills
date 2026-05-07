@@ -18,8 +18,7 @@ batuta-agent-skills/
 │   ├── plans/active/          ← exactly one active plan per feature branch
 │   ├── plans/archive/         ← completed plans, dated
 │   ├── sessions/              ← session journals (YYYY-MM-DD-<slug>.md)
-│   ├── DELEGATION-RULE.md            ← delegation contract
-│   └── DELEGATION-RULE-SPECIALISTS.md ← feature spec: agent-architect + Haiku/Sonnet calibration
+│   └── pipeline-architecture.md      ← KB pipeline design
 ├── agents/                    ← 9 plugin-shipped agents (6 base + 1 meta + 3 KB pipeline), all with explicit model:
 ├── hooks/
 │   ├── hooks.json             ← SessionStart + PreToolUse registration
@@ -50,7 +49,7 @@ batuta-agent-skills/
 | `kb-curator` | sonnet | Markdown classifier for kb-curate: 7-category classification of journal bullets | Read, Write, Edit, Bash, Grep, Glob |
 | `kb-backfiller` | sonnet | Legacy repo extractor: READMEs, commits, issues, code analysis → vault inbox | Read, Write, Grep, Glob, Bash |
 
-The six base agents (implementer, implementer-haiku, code-reviewer, security-auditor, test-engineer, and agent-architect's generated specialists) form the audit chain (test → review → security after implementation). `agent-architect` is the meta-layer for dynamic specialist creation; it does not execute work itself. The three KB agents (`kb-pipeline`, `kb-curator`, `kb-backfiller`) handle the Obsidian vault pipeline — per-commit capture, batch curation, and legacy backfill respectively. See [`adr/0001-rule-zero-delegation-only-main.md`](adr/0001-rule-zero-delegation-only-main.md) for why these specific roles, [`adr/0002-implementer-haiku-separate-agent.md`](adr/0002-implementer-haiku-separate-agent.md) for why the Haiku tier is a separate agent, [`adr/0012-obsidian-only-kb-pipeline.md`](adr/0012-obsidian-only-kb-pipeline.md) for the KB pipeline architecture, and [`DELEGATION-RULE-SPECIALISTS.md`](DELEGATION-RULE-SPECIALISTS.md) for the task-complexity calibration that picks the model.
+The six base agents (implementer, implementer-haiku, code-reviewer, security-auditor, test-engineer, and agent-architect's generated specialists) form the audit chain (test → review → security after implementation). `agent-architect` is the meta-layer for dynamic specialist creation; it does not execute work itself. The three KB agents (`kb-pipeline`, `kb-curator`, `kb-backfiller`) handle the Obsidian vault pipeline — per-commit capture, batch curation, and legacy backfill respectively. See [`adr/0001-rule-zero-delegation-only-main.md`](adr/0001-rule-zero-delegation-only-main.md) for why these specific roles, [`adr/0002-implementer-haiku-separate-agent.md`](adr/0002-implementer-haiku-separate-agent.md) for why the Haiku tier is a separate agent, [`adr/0012-obsidian-only-kb-pipeline.md`](adr/0012-obsidian-only-kb-pipeline.md) for the KB pipeline architecture, and [`rules/core/model-routing.md`](../rules/core/model-routing.md) for the task-complexity calibration that picks the model.
 
 ## Layer 2 — Project-local specialists (created at runtime by `agent-architect`)
 
@@ -61,7 +60,7 @@ The six base agents (implementer, implementer-haiku, code-reviewer, security-aud
 - Workflow ending with the literal `READY FOR AUDIT: test-engineer → code-reviewer → security-auditor`
 - Reserved-name guard prevents shadowing of base agents
 
-See [`DELEGATION-RULE-SPECIALISTS.md`](DELEGATION-RULE-SPECIALISTS.md) for the full creation contract, sanitization rules, promotion path (project-local → user-global), and fleet maintenance.
+See [`rules/core/model-routing.md`](../rules/core/model-routing.md) for the model calibration and [`adr/0001-rule-zero-delegation-only-main.md`](adr/0001-rule-zero-delegation-only-main.md) for the delegation rationale.
 
 ## Layer 3 — Runtime enforcement (PreToolUse hook)
 
@@ -87,12 +86,12 @@ After the implementer (or specialist) writes code:
 ```
 GATE 1: test-engineer       → AUDIT RESULT: APPROVED | BLOCKED
 GATE 2: code-reviewer       → AUDIT RESULT: APPROVED | BLOCKED
-GATE 3: security-auditor    → AUDIT RESULT: APPROVED | BLOCKED  (default-on; skip allowlist in DELEGATION-RULE.md)
+GATE 3: security-auditor    → AUDIT RESULT: APPROVED | BLOCKED  (default-on)
 ```
 
 Sequential, not parallel — each gate reads the previous one's output. The main agent does NOT close a task until all applicable gates return APPROVED. A BLOCKED verdict reopens the cycle with the auditor's report attached. See [`adr/0004-audit-chain-sequential-not-parallel.md`](adr/0004-audit-chain-sequential-not-parallel.md) for the rationale.
 
-The contract is documented in [`DELEGATION-RULE.md`](DELEGATION-RULE.md) including the GATE 3 skip allowlist (4 narrow conditions, exhaustive) and the anti-rationalization table for the main.
+The GATE 3 skip allowlist (docs-only slices with no code/config/hooks) and anti-rationalization table are documented inline in the security-auditor agent prompt.
 
 ## Layer 5 — Documentation graph (this layer)
 

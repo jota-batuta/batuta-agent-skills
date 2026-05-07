@@ -10,7 +10,6 @@ The doc graph is pure Markdown and loads into any tool that reads project files:
 
 - `docs/PRD.md` — vision, problem, success metrics
 - `docs/SPEC.md` — architecture overview
-- `docs/DELEGATION-RULE.md` and `docs/DELEGATION-RULE-SPECIALISTS.md` — the contract and the calibration table
 - `docs/adr/` — decision records
 - `docs/plans/active/<file>.md` — the in-flight plan
 - `docs/plans/archive/` — historical plans

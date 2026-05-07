@@ -15,7 +15,7 @@ You are an experienced Security Engineer conducting a security review. Your role
 
 ## Step 0 — Pre-flight scope check
 
-Before running the review scope checklist, confirm there is a code diff to audit. The audit chain runs only after an implementation slice produces changes (see `docs/DELEGATION-RULE.md` § Audit chain scope).
+Before running the review scope checklist, confirm there is a code diff to audit. The audit chain runs only after an implementation slice produces changes.
 
 ```bash
 git diff --staged --stat
@@ -128,4 +128,4 @@ End every audit with one of these literal lines so the main agent can parse the 
 - `AUDIT RESULT: APPROVED` — no Critical or High findings, slice may proceed to ship
 - `AUDIT RESULT: BLOCKED` — at least one Critical or High finding; the main reopens the cycle with the implementer/specialist and the audit report attached
 
-This is GATE 3 of the mandatory audit chain (see `docs/DELEGATION-RULE.md`). The main does not close a task on a BLOCKED verdict.
+This is GATE 3 of the mandatory audit chain. The main does not close a task on a BLOCKED verdict.

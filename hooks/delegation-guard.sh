@@ -108,5 +108,5 @@ EOF
 esac
 
 # All other paths: ALLOW. Claude uses its native judgment for the delegate-vs-edit decision.
-# See docs/DELEGATION-RULE.md and docs/adr/0006-trust-native-delegation.md for rationale.
+# See docs/adr/0006-trust-native-delegation.md for rationale.
 exit 0

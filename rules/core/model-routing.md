@@ -4,7 +4,7 @@ applies-to: ["python", "typescript", "bash"]
 last-reviewed: 2026-05-04
 enforcement: context-only
 # §A.6: verbatim derivation of ~/.claude/CLAUDE.md "Native delegation + post-edit audit";
-# reinforced by ADR-0001, ADR-0002, docs/DELEGATION-RULE.md, and direct evidence from
+# reinforced by ADR-0001, ADR-0002, and direct evidence from
 # a multi-bank financial pipeline (2026-05-04) where main Opus executed gh/WebFetch/Edit
 # directly, producing high-cost, low-quality results that a Sonnet subagent would have
 # handled correctly.
@@ -45,7 +45,7 @@ cost. This rule makes delegation the default, not an option.
 4. Main Opus retains direct execution rights for: orchestration decisions, architectural
    choices, grilling during `intent-capture`, synthesis of subagent reports, and edits to
    plugin meta-work files (plan files, memory entries, `MEMORY.md` index, ADRs, rules, skills).
-   These are the kill-switch paths documented in `docs/DELEGATION-RULE.md`.
+   These are the kill-switch paths enforced by `hooks/delegation-guard.sh`.
 
 5. The subagent MUST receive a self-contained input: the confirmed intent JSON (from
    `intent-capture`) plus explicit citations of applicable rules (`rules/no-hardcoded-magic.md`,
