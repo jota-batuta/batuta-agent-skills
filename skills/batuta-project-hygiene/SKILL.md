@@ -500,6 +500,23 @@ Do NOT trigger:
    git commit -m "feat(<name>): scaffold feature folder with CLAUDE.md and SPEC.md"
    ```
 
+5.5. **Write the authoring marker (MANDATORY)**:
+
+   After the Step 5 commit succeeds, run:
+
+   ```bash
+   mkdir -p "$(git rev-parse --show-toplevel)/.claude" && \
+     touch "$(git rev-parse --show-toplevel)/.claude/.authoring-marker-feature-$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+   ```
+
+   This marker is consumed by `hooks/pre-write-feature-gate.sh`. Without it, any
+   attempt to create a feature CLAUDE.md in a subdirectory is blocked by the hook.
+   Valid for 60 minutes (mtime-based). Gitignored — `.claude/.authoring-marker-*`
+   is already in `.gitignore`. Re-running the command refreshes the timestamp.
+
+   Do not skip this step. If you skip it, subsequent feature CLAUDE.md creation
+   will be blocked with a "RULE violated (feature-init gate)" message.
+
 6. **Verification**:
    - `<feature-folder>/CLAUDE.md` exists
    - `<feature-folder>/SPEC.md` exists
@@ -521,6 +538,7 @@ Do NOT trigger:
 - Generating a CLAUDE.md that is a verbatim copy of another project's CLAUDE.md (always re-run stack detection).
 - Committing across feature boundaries (feature-init must only touch its own folder).
 - Skipping the git branch creation in feature-init mode.
+- Skipping Step 5.5: not writing `.authoring-marker-feature-*` after the scaffold commit. Without the marker, the gate blocks all subsequent feature CLAUDE.md creation in the session.
 - Pushing to GitHub without asking the operator first, or pushing to a public repo when the operator said `--private`.
 - Ignoring auto-detection signals (if `src/` directory exists in a Python project, default to `src/<name>/`; do not ask the operator a question that the project structure already answers).
 - Creating a feature folder at `src/<name>/` in a project whose `## Feature folder convention` recorded `style: layered`. The style decision is sticky — don't override without asking the operator.
@@ -552,6 +570,7 @@ After `feature-init <name>` (feature-oriented):
 test -f features/<name>/CLAUDE.md 2>/dev/null || test -f packages/<name>/CLAUDE.md 2>/dev/null || test -f src/<name>/CLAUDE.md 2>/dev/null || test -f app/<name>/CLAUDE.md 2>/dev/null
 test -f features/<name>/SPEC.md 2>/dev/null || test -f packages/<name>/SPEC.md 2>/dev/null || test -f src/<name>/SPEC.md 2>/dev/null || test -f app/<name>/SPEC.md 2>/dev/null
 git branch --show-current | grep -q "feature/<name>"
+find .claude -maxdepth 1 -name '.authoring-marker-feature-*' -mmin -60 | grep -q . && echo "marker OK" || echo "WARN: marker missing or expired — run Step 5.5"
 ```
 
 After `feature-init <name>` (layered):
@@ -562,6 +581,7 @@ grep -q "## Code map" docs/features/<name>/CLAUDE.md
 git branch --show-current | grep -q "feature/<name>"
 # Negative: no new folder inside src/<pkg>/ for this feature
 test ! -d src/*/<name>
+find .claude -maxdepth 1 -name '.authoring-marker-feature-*' -mmin -60 | grep -q . && echo "marker OK" || echo "WARN: marker missing or expired — run Step 5.5"
 ```
 
 If any check fails, the mode did not complete — report the failure to the operator and do not proceed to the next user task.
