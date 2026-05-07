@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # 09-audit-chain-graph-integration.sh
-# Validates the v3.0 audit-chain x code-graph integration:
-#   (a) code-reviewer.md and security-auditor.md declare Step 0.5
-#       with graceful-degrade clause and engine citation requirement.
-#   (b) test-engineer.md does NOT have Step 0.5 (scope guard per ADR-0008).
-#   (c) Both Step 0.5 sections explicitly call check-code-graph-engines.sh
-#       (so auditors gate on the same shared availability check).
-#   (d) Both Step 0.5 sections are non-blocking
-#       (no path that returns BLOCKED from Step 0.5 itself).
-# Contract introduced in v3.0 (ADR-0008).
+# Validates the v4.1 removal of Step 0.5 from audit agents.
+# (Step 0.5 was non-blocking blast/attack-surface enumeration via code-graph;
+#  removed in v4.1 — zero adoption, grep+read covers all use cases for < 10k LOC.)
+#   (a) code-reviewer.md does NOT have Step 0.5 (intentionally removed v4.1).
+#   (a') security-auditor.md does NOT have Step 0.5 (intentionally removed v4.1).
+#   (b) test-engineer.md does NOT have Step 0.5 (scope guard per ADR-0008; unchanged).
+#   (c) ADR-0008 exists (historical record of the v3.0 integration contract).
+# Contract introduced in v3.0 (ADR-0008); updated in v4.1 to assert removal.
 
 set -uo pipefail
 
@@ -45,45 +44,22 @@ check_absent() {
   fi
 }
 
-# --- (a) code-reviewer.md must have Step 0.5 ---
+# --- (a) code-reviewer.md must NOT have Step 0.5 (removed in v4.1) ---
 if [[ ! -f "$CR" ]]; then
   miss "agents/code-reviewer.md missing"
 else
-  check_present "$CR" '## Step 0\.5 — Blast-radius enumeration via code-graph' "Step 0.5 heading"
-  check_present "$CR" 'non-blocking'                         "Step 0.5 declared non-blocking"
-  check_present "$CR" 'check-code-graph-engines\.sh'         "Step 0.5 calls check-code-graph-engines.sh"
-  check_present "$CR" 'falling back to diff-only review'     "Step 0.5 graceful-degrade fallback string"
-  check_present "$CR" '\[blast radius via'                   "Step 0.5 mandates engine citation"
-  # Step 0.5 must come AFTER Step 0 and BEFORE Review Framework
-  s0_line=$(grep -nE '^## Step 0 — Pre-flight scope check'           "$CR" | head -n1 | cut -d: -f1)
-  s05_line=$(grep -nE '^## Step 0\.5 — Blast-radius enumeration'      "$CR" | head -n1 | cut -d: -f1)
-  rf_line=$(grep -nE '^## Review Framework'                           "$CR" | head -n1 | cut -d: -f1)
-  if [[ -n "$s0_line" && -n "$s05_line" && -n "$rf_line" \
-        && $s0_line -lt $s05_line && $s05_line -lt $rf_line ]]; then
-    ok "code-reviewer.md — Step 0.5 ordered between Step 0 and Review Framework"
-  else
-    miss "code-reviewer.md — Step 0.5 must sit between Step 0 and Review Framework (got s0=$s0_line s0.5=$s05_line rf=$rf_line)"
-  fi
+  check_absent "$CR" '## Step 0\.5 — Blast-radius enumeration via code-graph' "Step 0.5 heading (intentionally removed v4.1)"
+  check_absent "$CR" 'check-code-graph-engines\.sh'          "check-code-graph-engines.sh call (Step 0.5 removed)"
+  check_absent "$CR" 'falling back to diff-only review'      "graceful-degrade string (Step 0.5 removed)"
 fi
 
-# --- (a') security-auditor.md must have Step 0.5 ---
+# --- (a') security-auditor.md must NOT have Step 0.5 (removed in v4.1) ---
 if [[ ! -f "$SA" ]]; then
   miss "agents/security-auditor.md missing"
 else
-  check_present "$SA" '## Step 0\.5 — Attack-surface enumeration via code-graph' "Step 0.5 heading"
-  check_present "$SA" 'non-blocking'                         "Step 0.5 declared non-blocking"
-  check_present "$SA" 'check-code-graph-engines\.sh'         "Step 0.5 calls check-code-graph-engines.sh"
-  check_present "$SA" 'falling back to diff-only audit'      "Step 0.5 graceful-degrade fallback string"
-  check_present "$SA" '\[attack surface via'                 "Step 0.5 mandates engine citation"
-  s0_line=$(grep -nE '^## Step 0 — Pre-flight scope check'           "$SA" | head -n1 | cut -d: -f1)
-  s05_line=$(grep -nE '^## Step 0\.5 — Attack-surface enumeration'    "$SA" | head -n1 | cut -d: -f1)
-  rs_line=$(grep -nE '^## Review Scope'                               "$SA" | head -n1 | cut -d: -f1)
-  if [[ -n "$s0_line" && -n "$s05_line" && -n "$rs_line" \
-        && $s0_line -lt $s05_line && $s05_line -lt $rs_line ]]; then
-    ok "security-auditor.md — Step 0.5 ordered between Step 0 and Review Scope"
-  else
-    miss "security-auditor.md — Step 0.5 must sit between Step 0 and Review Scope (got s0=$s0_line s0.5=$s05_line rs=$rs_line)"
-  fi
+  check_absent "$SA" '## Step 0\.5 — Attack-surface enumeration via code-graph' "Step 0.5 heading (intentionally removed v4.1)"
+  check_absent "$SA" 'check-code-graph-engines\.sh'          "check-code-graph-engines.sh call (Step 0.5 removed)"
+  check_absent "$SA" 'falling back to diff-only audit'       "graceful-degrade string (Step 0.5 removed)"
 fi
 
 # --- (b) test-engineer.md must NOT have Step 0.5 (scope guard per ADR-0008) ---
@@ -95,23 +71,9 @@ else
   check_absent "$TE" 'Attack-surface enumeration'          "attack-surface logic"
 fi
 
-# --- (c) ADR-0008 must exist and be referenced by both Step 0.5 blocks indirectly ---
+# --- (c) ADR-0008 must exist (historical record of v3.0 integration contract) ---
 ADR="${REPO_ROOT}/docs/adr/0008-audit-chain-code-graph-integration.md"
 [[ -f "$ADR" ]] && ok "docs/adr/0008-audit-chain-code-graph-integration.md exists" || miss "ADR-0008 missing"
-
-# --- (d) Step 0.5 must NOT contain a path that returns BLOCKED ---
-# The verdict line for both auditors is `AUDIT RESULT: APPROVED|BLOCKED|...`.
-# Step 0.5 must not produce a BLOCKED verdict on its own.
-for f in "$CR" "$SA"; do
-  if [[ -f "$f" ]]; then
-    s05_block=$(awk '/^## Step 0\.5 /,/^## /' "$f")
-    if echo "$s05_block" | grep -qE '^- *`AUDIT RESULT: BLOCKED'; then
-      drift "$(basename "$f") — Step 0.5 contains BLOCKED verdict (must be non-blocking)"
-    else
-      ok "$(basename "$f") — Step 0.5 does not produce BLOCKED verdict directly"
-    fi
-  fi
-done
 
 if [[ ${failed} -eq 0 ]]; then
   echo "[${case_name}] PASS"

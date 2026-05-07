@@ -3,6 +3,17 @@ title: Code knowledge graph usage
 applies-to: ["any-language-with-imports", "regulated-data"]
 last-reviewed: 2026-05-04
 enforcement: context-only
+deprecated: true
+deprecated_in: v4.1
+deprecation_reason: "code-graph skill deprecated; zero consumer adoption; codebase-flow-mapper + grep+read cover all use cases for repos under 10k LOC"
+---
+
+# Code knowledge graph usage — Deprecated (v4.1)
+
+> This rule is no longer enforced. The `code-graph` skill was deprecated in v4.1.
+> For architecture diagrams use `codebase-flow-mapper`. For call-site queries use grep+read.
+> This file is preserved for historical reference only.
+
 ---
 
 # Code knowledge graph usage

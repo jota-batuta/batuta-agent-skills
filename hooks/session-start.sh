@@ -45,9 +45,12 @@ if [[ -z "$repo_root" ]]; then
   # Not inside a git repo — skip KB context silently.
   kb_block=""
 elif [[ ! -f "$config_file" ]]; then
-  # No kb-config.json: leave a soft hint but don't auto-trigger hygiene.
-  # The CLAUDE.md auto-trigger rule covers that case when the operator starts work.
-  kb_block="KB context: .claude/kb-config.json not found in this repo. If this is a Batuta project, consider running batuta-project-hygiene to set up vault integration."
+  # No kb-config.json. If CLAUDE.md is also missing this is an uninitialized project.
+  if [[ ! -f "${repo_root}/CLAUDE.md" ]]; then
+    kb_block="MANDATORY PRE-FLIGHT: No CLAUDE.md found in this project. You MUST invoke batuta-project-hygiene mode=project-init BEFORE responding to any operator message, including greetings. Doc layers once set up: docs/intents/ = what you asked (before exec, bundled at close) | docs/sessions/ = what happened (at /kb-end-session) | docs/plans/active/ = how to execute across slices (auto-saved on ExitPlanMode)."
+  else
+    kb_block="KB context: .claude/kb-config.json not found. If this Batuta project uses the Obsidian vault, run batuta-project-hygiene to set up vault integration. Doc layers: docs/intents/ = what you asked (before exec, bundled at close) | docs/sessions/ = what happened (at /kb-end-session) | docs/plans/active/ = how to execute across slices (auto-saved on ExitPlanMode)."
+  fi
 else
   # ------------------------------------------------------------------
   # Parse kb-config.json (jq required; fall back to python3 if absent)
