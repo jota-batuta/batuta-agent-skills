@@ -117,6 +117,24 @@ Every change needs a description that stands alone in version control history.
 
 ## Review Process
 
+### Step 0: Detect Mode
+
+```
+Detect mode: count lines in `git diff --stat HEAD` or the provided diff.
+If total changed lines < 50 → Quick mode. Otherwise → Thorough mode.
+Report which mode is active at the start of the review output.
+```
+
+**Quick** (pre-commit review):
+- Applies when: diff < 50 LOC, no new files added, or invoked explicitly as "quick review"
+- Covers: Correctness (bugs, logic errors) + Security (input handling, secrets) + Readability (naming, clarity)
+- Skips: Architecture deep-dive, Performance analysis (apply only if obviously relevant)
+
+**Thorough** (pre-merge review):
+- Applies when: PR description present, diff ≥ 50 LOC, new files added, or invoked without "quick" qualifier
+- Covers: all 5 dimensions
+- Default when context is ambiguous
+
 ### Step 1: Understand the Context
 
 Before looking at code, understand the intent:
@@ -141,15 +159,15 @@ Tests reveal intent and coverage:
 
 ### Step 3: Review the Implementation
 
-Walk through the code with the five axes in mind:
+Walk through the code applying the axes for the active mode (Quick covers 1–2 + 4; Thorough covers all five):
 
 ```
 For each file changed:
 1. Correctness: Does this code do what the test says it should?
 2. Readability: Can I understand this without help?
-3. Architecture: Does this fit the system?
+3. Architecture: Does this fit the system? [Thorough only]
 4. Security: Any vulnerabilities?
-5. Performance: Any bottlenecks?
+5. Performance: Any bottlenecks? [Thorough only — or if obviously relevant in Quick mode]
 ```
 
 ### Step 4: Categorize Findings

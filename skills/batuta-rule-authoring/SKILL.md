@@ -13,7 +13,7 @@ Prevents low-quality or premature rules from entering `rules/`. A rule is a decl
 
 ## When to Use
 
-- Before adding any new `.md` file under `rules/core/`, `rules/stack/`, `rules/domain-co/`, or `rules/delivery/`
+- Before adding any new `.md` file under `rules/core/`, `rules/stack/`, or `rules/delivery/`
 - When promoting an inline project convention from a project's `CLAUDE.md` to a shared plugin rule
 
 ## When NOT to Use

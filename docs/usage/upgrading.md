@@ -2,7 +2,7 @@
 
 When a new version of `batuta-agent-skills` ships to `main`, your interactive Claude Code session does not pick it up automatically. The marketplace plugin loads from a **local cache** that updates only on explicit command + session restart.
 
-Symptom: `claude plugin list` shows version `2.7.0` (or any version older than `main`'s current `plugin.json`) while [`CHANGELOG.md`](../../CHANGELOG.md) shows newer releases shipped. New skills (e.g. `code-graph`), new agent contracts (e.g. Step 0.5 in `code-reviewer`), new ADRs — none of them are visible in your session.
+Symptom: `claude plugin list` shows a version older than `main`'s current state. New skills, agent contracts, ADRs — none of them are visible in your session.
 
 ## The 2-command upgrade
 

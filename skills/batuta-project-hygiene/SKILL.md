@@ -224,31 +224,6 @@ Do NOT trigger:
 
    **Skip each file if it already exists (idempotent).**
 
-   `AGENTS.md` (project root, ≤ 30 lines) — mirrors CLAUDE.md essentials in the cross-tool AGENTS.md standard so agents other than Claude Code can orient themselves. Points to docs/ — does NOT duplicate full content:
-
-   ```markdown
-   # AGENTS.md — <project-name>
-
-   > Cross-tool agent instructions. For Claude Code, see CLAUDE.md.
-   > Rule #0: read docs/DELEGATION-RULE.md before touching any file.
-
-   ## Project overview
-   <TODO: one-sentence summary — copy from docs/PRD.md when filled>
-
-   ## Doc graph
-   | Doc | Purpose |
-   |---|---|
-   | [docs/PRD.md](docs/PRD.md) | Vision, constraints, success metrics |
-   | [docs/SPEC.md](docs/SPEC.md) | Architecture overview and component map |
-   | [docs/plans/active/](docs/plans/active/) | Active task plans (start here for open work) |
-   | [docs/sessions/](docs/sessions/) | Session journals — last entry has "Next entry point" |
-   | [docs/adr/](docs/adr/) | Architecture decision records |
-
-   ## Rule #0 summary
-   Delegate only. Never invent an approach not in a plan or spec.
-   Full rule: [docs/DELEGATION-RULE.md](docs/DELEGATION-RULE.md)
-   ```
-
    `.aider.conf.yml` (project root, ≤ 15 lines) — created by default (or if the operator mentions Aider); skip otherwise. Lists the key context files so Aider's `--read` flag picks them up automatically:
 
    ```yaml
@@ -258,14 +233,14 @@ Do NOT trigger:
    # auto-commits: false ensures Aider does not silently rewrite files outside the audit cycle.
    # Consider also setting auto-lint: false if your linter could mutate files unexpectedly.
    read:
-     - AGENTS.md
+     - CLAUDE.md
      - docs/PRD.md
      - docs/SPEC.md
      - docs/plans/active/
    auto-commits: false
    ```
 
-   **Do NOT create** `.cursor/rules/`, `GEMINI.md`, or `.windsurfrules` — the operator opts into those per-tool. `AGENTS.md` and `.aider.conf.yml` are the only auto-bootstrapped cross-tool files.
+   **Do NOT create** `.cursor/rules/`, `GEMINI.md`, or `.windsurfrules` — the operator opts into those per-tool. `.aider.conf.yml` is the only auto-bootstrapped cross-tool file.
 
 4b. **Engineering invariants bootstrap (auto-apply, no prompt)** — for projects with a manifest (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`), run the following automatically. Skip only on pure-docs repos with no manifest markers. Do NOT ask the operator.
 
@@ -369,7 +344,6 @@ Do NOT trigger:
    - `./CLAUDE.md` exists and contains `## Mandatory Skills for Batuta Projects`
    - `test -f docs/PRD.md && test -f docs/SPEC.md && test -f docs/adr/0001-template-decision.md`
    - `test -d docs/plans/active && test -d docs/plans/archive && test -d docs/sessions`
-   - `test -f AGENTS.md` (cross-tool bootstrap ran for manifest project)
    - `test -f .aider.conf.yml || echo skipped` (skipped for pure-docs repos or if operator opted out)
    - `git log -1 --oneline` shows the hygiene commit
    - `git remote get-url origin` returns a URL (if GitHub step ran)
@@ -500,6 +474,23 @@ Do NOT trigger:
    git commit -m "feat(<name>): scaffold feature folder with CLAUDE.md and SPEC.md"
    ```
 
+5.5. **Write the authoring marker (MANDATORY)**:
+
+   After the Step 5 commit succeeds, run:
+
+   ```bash
+   mkdir -p "$(git rev-parse --show-toplevel)/.claude" && \
+     touch "$(git rev-parse --show-toplevel)/.claude/.authoring-marker-feature-$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+   ```
+
+   This marker is consumed by `hooks/pre-write-feature-gate.sh`. Without it, any
+   attempt to create a feature CLAUDE.md in a subdirectory is blocked by the hook.
+   Valid for 60 minutes (mtime-based). Gitignored — `.claude/.authoring-marker-*`
+   is already in `.gitignore`. Re-running the command refreshes the timestamp.
+
+   Do not skip this step. If you skip it, subsequent feature CLAUDE.md creation
+   will be blocked with a "RULE violated (feature-init gate)" message.
+
 6. **Verification**:
    - `<feature-folder>/CLAUDE.md` exists
    - `<feature-folder>/SPEC.md` exists
@@ -521,6 +512,7 @@ Do NOT trigger:
 - Generating a CLAUDE.md that is a verbatim copy of another project's CLAUDE.md (always re-run stack detection).
 - Committing across feature boundaries (feature-init must only touch its own folder).
 - Skipping the git branch creation in feature-init mode.
+- Skipping Step 5.5: not writing `.authoring-marker-feature-*` after the scaffold commit. Without the marker, the gate blocks all subsequent feature CLAUDE.md creation in the session.
 - Pushing to GitHub without asking the operator first, or pushing to a public repo when the operator said `--private`.
 - Ignoring auto-detection signals (if `src/` directory exists in a Python project, default to `src/<name>/`; do not ask the operator a question that the project structure already answers).
 - Creating a feature folder at `src/<name>/` in a project whose `## Feature folder convention` recorded `style: layered`. The style decision is sticky — don't override without asking the operator.
@@ -539,7 +531,6 @@ test -f docs/SPEC.md                                       # SPEC skeleton creat
 test -f docs/adr/0001-template-decision.md                 # ADR template created
 test -d docs/plans/active && test -d docs/plans/archive    # plans dirs exist
 test -d docs/sessions                                      # sessions dir exists
-test -f AGENTS.md                                          # cross-tool bootstrap (manifest projects)
 test -f .aider.conf.yml || echo skipped                    # Aider config (skipped for pure-docs repos)
 test -L .claude/rules/research-first-citations.md || echo skipped  # rules bootstrap (opted-in)
 grep -q "@.claude/rules/" CLAUDE.md || echo skipped        # invariants import present (opted-in)
@@ -552,6 +543,7 @@ After `feature-init <name>` (feature-oriented):
 test -f features/<name>/CLAUDE.md 2>/dev/null || test -f packages/<name>/CLAUDE.md 2>/dev/null || test -f src/<name>/CLAUDE.md 2>/dev/null || test -f app/<name>/CLAUDE.md 2>/dev/null
 test -f features/<name>/SPEC.md 2>/dev/null || test -f packages/<name>/SPEC.md 2>/dev/null || test -f src/<name>/SPEC.md 2>/dev/null || test -f app/<name>/SPEC.md 2>/dev/null
 git branch --show-current | grep -q "feature/<name>"
+find .claude -maxdepth 1 -name '.authoring-marker-feature-*' -mmin -60 | grep -q . && echo "marker OK" || echo "WARN: marker missing or expired — run Step 5.5"
 ```
 
 After `feature-init <name>` (layered):
@@ -562,6 +554,7 @@ grep -q "## Code map" docs/features/<name>/CLAUDE.md
 git branch --show-current | grep -q "feature/<name>"
 # Negative: no new folder inside src/<pkg>/ for this feature
 test ! -d src/*/<name>
+find .claude -maxdepth 1 -name '.authoring-marker-feature-*' -mmin -60 | grep -q . && echo "marker OK" || echo "WARN: marker missing or expired — run Step 5.5"
 ```
 
 If any check fails, the mode did not complete — report the failure to the operator and do not proceed to the next user task.

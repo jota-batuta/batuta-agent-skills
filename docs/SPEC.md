@@ -119,7 +119,7 @@ A library of declarative engineering invariants (style, security, multi-tenancy,
 
 - **Format:** plain Markdown with light frontmatter (`title`, `applies-to`, `last-reviewed`). NOT `SKILL.md` format.
 - **Activation:** explicit `@<path>` import in the consumer project's `CLAUDE.md`. NOT auto-discovered.
-- **Folder structure:** `rules/core/` (universal), `rules/stack/`, `rules/domain-co/`, `rules/delivery/`. New domain folders are added as evidence accumulates.
+- **Folder structure:** `rules/core/` (universal), `rules/stack/`, `rules/delivery/`. New domain folders are added as evidence accumulates.
 - **Import path:** consumer projects symlink `.claude/rules/<rule>.md` → `<plugin>/rules/<rule>.md` via `tools/setup-rules.sh`, then import via `@.claude/rules/<rule>.md` (project-relative, portable cross-developer).
 - **Authoring gate:** new rules must pass the `batuta-rule-authoring` skill (validates §A.4 format, §A.5 conventions, §A.6 admission gate of N=2 projects evidence).
 
@@ -146,7 +146,7 @@ A code-graph layer so architecture / onboarding / refactor questions consult a p
 - **Slash:** [`.claude/commands/code-graph.md`](../.claude/commands/code-graph.md). Operator-invoked manual surface. Modes: `--scan`, `--watch`, `--query`.
 - **Bootstrap:** [`tools/setup-code-graph.sh`](../tools/setup-code-graph.sh). Operator-side. Installs `codebase-memory-mcp` (SHA-256-verified GitHub release download; provenance-attested via `gh attestation verify` if available). Idempotent. **Not** chained from `tools/setup-rules.sh --all` (changed in v4.0 — rule import is independent of engine bootstrap).
 - **Audit chain integration (Step 0.5, v3.0+):** `code-reviewer` and `security-auditor` consult the engine after Step 0 (NOT-APPLICABLE) and before the framework review, for blast-radius / attack-surface enumeration. Non-blocking; graceful-degrade to v2.9 behavior when the engine is not available. `test-engineer` is intentionally NOT consulting (scope guard, ADR-0008).
-- **Rule:** [`rules/integrations/code-graph-usage.md`](../rules/integrations/code-graph-usage.md). Declarative contract for consumer projects (cite the engine, never run `graphify claude install`, never commit the cache, etc.).
+- **Rule:** *(removed in v4.1 — `rules/integrations/code-graph-usage.md` deprecated with zero consumer adoption)*.
 
 See [`adr/0007-code-graph-dual-engine.md`](adr/0007-code-graph-dual-engine.md) for the original dual-engine rationale, [`adr/0008-audit-chain-code-graph-integration.md`](adr/0008-audit-chain-code-graph-integration.md) for Step 0.5, and [`adr/0013-v4.0-distillation.md`](adr/0013-v4.0-distillation.md) for the v4.0 single-engine simplification. Operator recipe: [`usage/code-graph.md`](usage/code-graph.md). Debug recipe: [`usage/debugging-with-code-graph.md`](usage/debugging-with-code-graph.md).
 

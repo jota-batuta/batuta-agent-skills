@@ -87,6 +87,7 @@ esac
 # Subagents that legitimately need to write here (e.g. agent-architect creating
 # .claude/agents/<x>.md) bypass this script entirely via agent_id above.
 case "$file_path" in
+  */.claude/.intent-and-routing-confirmed-*|.claude/.intent-and-routing-confirmed-*|\
   */.claude/settings*.json|.claude/settings*.json|\
   */.claude/hooks/*|.claude/hooks/*|\
   */hooks/*.json|hooks/*.json|\
@@ -100,6 +101,7 @@ case "$file_path" in
 RULE #0 violated (kill-switch): the main agent cannot modify ${file_path} directly.
 This file controls plugin enforcement; modifying it from the main would self-disable safeguards.
 Delegate to a subagent (haiku for trivial edits, implementer for substantive changes), or update via the plugin's installation flow.
+Use Write to \`.intent-pending-*\` instead — the hook promotes pending to confirmed on operator confirmation.
 EOF
     exit 1
     ;;

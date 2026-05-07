@@ -134,7 +134,7 @@ What is **not** automatic: new rules added to the plugin. If the plugin gains a 
 
 ## When to NOT import a rule
 
-If a rule has no plausible application in your project (e.g. importing `domain-co/dian-formats.md` in a project for a non-Colombian client), do not import it. Importing irrelevant rules wastes tokens and obscures the rules that do matter.
+If a rule has no plausible application in your project, do not import it. Importing irrelevant rules wastes tokens and obscures the rules that do matter.
 
 ## Troubleshooting
 

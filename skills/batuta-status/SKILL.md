@@ -55,6 +55,9 @@ Compute once across all in-scope projects:
 - **Total drafts pending**: sum of `.md.draft` files across all vault locations.
 - **Stale gotchas (> 4 months)**: scan `<vault_root>/gotchas` and `<vault_root>/clients/*/projects/*/gotchas` for files whose `last_verified:` frontmatter date is more than 4 months before today.
 - **`_inbox/` size**: `find <vault_root>/_inbox -type f | wc -l`.
+- **Operator open PRs**: `gh pr list --state open --author @me --json title,url,headRefName,updatedAt` — list all PRs the operator has open across repos. Include in the summary output. If `gh` is unavailable, skip with a one-line warning.
+- **Uncommitted intent files**: for each project in scope, run `git -C <repo> diff --name-only HEAD -- docs/intents/ && git -C <repo> ls-files --others --exclude-standard docs/intents/` — if any files are returned, those intent files were not bundled at slice close as required. Show as a ⚠ warning per project.
+- **Multiple active plans**: for each project, count `.md` files in `docs/plans/active/`. If the count exceeds 1, show as a ⚠ warning "Multiple active plans detected — likely stale, sweep recommended".
 
 ### Step 5: Print summary
 
@@ -65,10 +68,13 @@ Output is for chat only — do NOT write to a file.
 ─ bato-cajas (D:\bato-cajas) · feature/conciliacion-v2 · 5 commits 7d · journal hoy ✓ · 2 drafts pending
 ─ BATO2 (D:\BATO2) · main · 1 commit 7d · journal hoy ✗
 ─ batuta-portal · feature/v3 · 12 commits 7d · journal hoy ✓ · 1 draft pending
+  ⚠ Intent files uncommitted: docs/intents/IC-015.md, docs/intents/IC-016.md
+  ⚠ Multiple active plans detected — likely stale, sweep recommended
 
 Drafts pendientes review: 3
 Gotchas stale (>4 meses): 4
 _inbox sin clasificar: 12 archivos
+PRs open (@me): feature/conciliacion-v2, feat/IC-016-flow-fix
 ```
 
 Keep output ≤ 30 lines. For the weekly regeneration of `STATUS.md` in the vault, the weekly cron routine handles it.
@@ -79,6 +85,9 @@ Keep output ≤ 30 lines. For the weekly regeneration of `STATUS.md` in the vaul
 - `_inbox/` size > 20 — inbox drain is behind; trigger `/kb-curate --scope all-pending`.
 - More than 50 drafts pending across all projects — operator is not reviewing drafts; surface the specific files.
 - A project has no `.claude/kb-config.json` — it was not initialized with `batuta-project-hygiene`; show a warning per project.
+- Uncommitted intent files in `docs/intents/` — they were not bundled at slice close; remind the operator to commit them with the next code change.
+- More than 1 file in `docs/plans/active/` — only one active plan is expected per branch; stale plans accumulate when feature branches are not cleaned up after merging.
+- Operator has PRs open for > 7 days without recent commits — may indicate a stalled review cycle.
 
 ## Verification
 
@@ -86,3 +95,6 @@ Keep output ≤ 30 lines. For the weekly regeneration of `STATUS.md` in the vaul
 - Running `/batuta-status --scope project` from a repo with a valid `.claude/kb-config.json` returns exactly one project line.
 - Running `/batuta-status --scope client:nonexistent-slug` returns an empty project list with a clear message, not an error.
 - Re-running produces the same output for the same git and vault state (deterministic, read-only).
+- If the operator has open PRs, a "PRs open (@me)" line appears in the summary. If `gh` is unavailable or returns zero PRs, the line is omitted (not an error).
+- If any project has uncommitted intent files, a ⚠ warning line appears beneath that project's summary line.
+- If any project has more than 1 file in `docs/plans/active/`, a ⚠ warning line appears beneath that project's summary line.

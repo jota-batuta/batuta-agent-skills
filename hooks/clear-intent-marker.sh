@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # clear-intent-marker.sh (v4.6)
-# UserPromptSubmit hook:
-#   1. Invalidate intent-capture markers at each operator turn
-#   2. Inject routing classifier (~25 tokens) — forces the model to classify
-#      (read-only vs action) and resolve dimensions before acting
+# UserPromptSubmit hook implementing the two-phase intent marker protocol:
+#   Phase 0: Parse operator prompt from stdin JSON.
+#   Phase 1: Promote .intent-pending-* → .intent-and-routing-confirmed-* if
+#            the prompt is an exact confirmation phrase AND a pending marker exists.
+#            The hook is the sole writer of confirmed markers (v4.6).
+#   Phase 2: Clear all stale markers. If promoted: keep the new confirmed marker,
+#            clear only legacy types. If not: clear everything.
+#   Phase 3: Inject routing classifier (~25 tokens).
 #
 # Fail-soft: any failure logs to kb-debug.log and exits 0.
 
@@ -13,9 +17,17 @@ trap 'exit 0' ERR
 input=$(cat 2>/dev/null || true)
 
 # ============================================================================
-# Part 1 — Resolve project root and invalidate markers (v4.2 behavior, preserved).
+# Phase 0 — Parse operator prompt from stdin JSON (UserPromptSubmit provides
+# the user's message in the "prompt" field).
 # ============================================================================
+user_prompt=""
+if command -v jq >/dev/null 2>&1; then
+  user_prompt=$(echo "$input" | jq -r '.prompt // ""' 2>/dev/null || true)
+fi
 
+# ============================================================================
+# Part 1 — Resolve project root.
+# ============================================================================
 project_root="${CLAUDE_PROJECT_DIR:-}"
 
 if [[ -z "$project_root" ]]; then
@@ -40,37 +52,69 @@ fi
 if [[ -n "$project_root" ]]; then
   marker_dir="$project_root/.claude"
   if [[ -d "$marker_dir" ]]; then
+    promoted=0
+
+    # ============================================================================
+    # Phase 1 — Two-phase promotion: pending → confirmed.
+    # Requires BOTH:
+    #   a) operator prompt exactly matches a confirmation phrase, AND
+    #   b) a .intent-pending-* file exists in the marker dir.
+    # ============================================================================
+    if command -v jq >/dev/null 2>&1 && [[ -n "$user_prompt" ]]; then
+      prompt_trimmed=$(echo "$user_prompt" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      # Use bash [[ =~ ]] — $ is end-of-string, not end-of-line (unlike grep -E).
+      # This prevents multi-line prompt injection from triggering a false confirmation.
+      if [[ "$prompt_trimmed" =~ ^(dale|procedé|procede|proceda|go[[:space:]]+ahead|proceed|yes|okey|ok|confirmo|confirmed|ejecuta|hacelo|hazlo|go|sí|si|approved|listo|aprobado|continue)[.!,]?$ ]]; then
+        shopt -s nullglob
+        pending_markers=("$marker_dir"/.intent-pending-*)
+        shopt -u nullglob
+        if [[ ${#pending_markers[@]} -gt 0 ]]; then
+          iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          confirmed_marker="$marker_dir/.intent-and-routing-confirmed-${iso}"
+          if cp "${pending_markers[0]}" "$confirmed_marker" 2>/dev/null; then
+            promoted=1
+            rm -f "${pending_markers[@]}" 2>/dev/null
+            echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh promoted ${#pending_markers[@]} pending marker(s) to confirmed: $confirmed_marker" >> "$marker_dir/kb-debug.log" 2>/dev/null
+          else
+            echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh: copy pending→confirmed failed" >> "$marker_dir/kb-debug.log" 2>/dev/null
+          fi
+        fi
+      fi
+    fi
+
+    # ============================================================================
+    # Phase 2 — Clear stale markers (unified — replaces 3 separate blocks).
+    # If promoted: keep the newly written confirmed marker; clear legacy only.
+    # If not promoted: clear all (confirmed + pending + legacy).
+    # ============================================================================
     shopt -s nullglob
-    markers=("$marker_dir"/.intent-confirmed-*)
+    if [[ $promoted -eq 1 ]]; then
+      stale_markers=(
+        "$marker_dir"/.intent-confirmed-*
+        "$marker_dir"/.routing-confirmed-*
+        "$marker_dir"/.intent-pending-*
+      )
+    else
+      stale_markers=(
+        "$marker_dir"/.intent-confirmed-*
+        "$marker_dir"/.routing-confirmed-*
+        "$marker_dir"/.intent-and-routing-confirmed-*
+        "$marker_dir"/.intent-pending-*
+      )
+    fi
     shopt -u nullglob
-    count=${#markers[@]}
+
+    count=${#stale_markers[@]}
     if [[ $count -gt 0 ]]; then
-      rm -f "${markers[@]}" 2>/dev/null
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh removed ${count} intent marker(s) from $marker_dir" >> "$marker_dir/kb-debug.log" 2>/dev/null
-    fi
-
-    # v4.4: also invalidate routing-confirmed markers at the turn boundary
-    shopt -s nullglob
-    routing_markers=("$marker_dir"/.routing-confirmed-*)
-    shopt -u nullglob
-    rcount=${#routing_markers[@]}
-    if [[ $rcount -gt 0 ]]; then
-      rm -f "${routing_markers[@]}" 2>/dev/null
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh removed ${rcount} routing marker(s) from $marker_dir" >> "$marker_dir/kb-debug.log" 2>/dev/null
-    fi
-
-    # v4.5: invalidate combined intent+routing markers at the turn boundary
-    shopt -s nullglob
-    combined_markers=("$marker_dir"/.intent-and-routing-confirmed-*)
-    shopt -u nullglob
-    ccount=${#combined_markers[@]}
-    if [[ $ccount -gt 0 ]]; then
-      rm -f "${combined_markers[@]}" 2>/dev/null
-      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh removed ${ccount} combined marker(s) from $marker_dir" >> "$marker_dir/kb-debug.log" 2>/dev/null
+      rm -f "${stale_markers[@]}" 2>/dev/null
+      echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh cleared ${count} stale marker(s) from $marker_dir" >> "$marker_dir/kb-debug.log" 2>/dev/null
     fi
   fi
 fi
 
+# ============================================================================
+# Phase 3 — Inject routing classifier (~25 tokens).
+# ============================================================================
 classifier='Classify: read-only or action? If action, resolve the 6 dimensions (objective, done, scope, constraints, reversibility, safety) from code/context — propose what you can, ask only what you cannot.'
 
 if command -v jq >/dev/null 2>&1; then

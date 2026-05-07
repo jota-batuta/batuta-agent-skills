@@ -52,55 +52,6 @@ fi
 tool_name=$(echo "$input" | jq -r '.tool_name // empty' 2>/dev/null)
 
 # ============================================================================
-# Helper: locate project root and check for marker.
-# Sets $project_root and $marker_found ("1" or "").
-# ============================================================================
-find_project_root_and_marker() {
-  local from_path="$1"
-  project_root=""
-  marker_found=""
-
-  # Try walk-up from from_path.
-  local search_dir
-  search_dir="$(dirname "$from_path")"
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
-    if [[ -d "$search_dir/.git" ]]; then
-      project_root="$search_dir"
-      break
-    fi
-    local parent
-    parent="$(dirname "$search_dir")"
-    if [[ "$parent" == "$search_dir" ]]; then
-      break
-    fi
-    search_dir="$parent"
-  done
-
-  # Fall back to $CLAUDE_PROJECT_DIR.
-  if [[ -z "$project_root" && -n "${CLAUDE_PROJECT_DIR:-}" ]]; then
-    project_root="${CLAUDE_PROJECT_DIR//\\//}"
-  fi
-
-  # Fall back to git rev-parse on cwd.
-  if [[ -z "$project_root" ]]; then
-    project_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
-  fi
-
-  if [[ -z "$project_root" ]]; then
-    return
-  fi
-
-  local marker_dir="$project_root/.claude"
-  if [[ -d "$marker_dir" ]]; then
-    local f
-    f=$(find "$marker_dir" -maxdepth 1 -not -empty \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
-    if [[ -n "$f" ]]; then
-      marker_found="1"
-    fi
-  fi
-}
-
-# ============================================================================
 # Bash branch — all Bash tool calls gated.
 # ============================================================================
 if [[ "$tool_name" == "Bash" ]]; then

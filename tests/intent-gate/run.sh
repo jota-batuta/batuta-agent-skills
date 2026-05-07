@@ -20,6 +20,10 @@ cases=(
   "05-routing-combined-marker-allows.sh"
   "06-routing-legacy-routing-marker-allows.sh"
   "07-clear-deletes-combined-marker.sh"
+  "08-pending-dale-promotes-to-confirmed.sh"
+  "09-non-confirmation-clears-pending.sh"
+  "10-no-pending-dale-noop.sh"
+  "11-promotion-preserves-content.sh"
 )
 
 pass=0

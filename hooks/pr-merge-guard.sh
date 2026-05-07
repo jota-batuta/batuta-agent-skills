@@ -35,10 +35,10 @@ fi
 
 # Extract the Bash command. Other tools' hooks won't reach this matcher; this
 # is registered only for the `Bash` matcher in hooks.json.
-command=$(echo "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)
+bash_command=$(echo "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)
 
 # Empty command: nothing to inspect, allow.
-if [[ -z "$command" ]]; then
+if [[ -z "$bash_command" ]]; then
   exit 0
 fi
 
@@ -53,7 +53,7 @@ fi
 #   gh pr view
 #   gh pr review
 #   git merge   (different command entirely)
-if ! echo "$command" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge([[:space:]]|$)'; then
+if ! echo "$bash_command" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge([[:space:]]|$)'; then
   exit 0
 fi
 
@@ -87,6 +87,6 @@ The env var is operator-side and cannot be set from inside an agent — that
 is the design. If you (the agent) believe this merge is legitimate, surface
 the request to the operator and stop.
 
-Command attempted: ${command}
+Command attempted: ${bash_command}
 EOF
 exit 1

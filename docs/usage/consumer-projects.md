@@ -32,7 +32,7 @@ In a fresh project directory, open Claude Code and start describing your work. I
 4. Appends the **Mandatory Skills for Batuta Projects** section verbatim.
 5. Creates `docs/{PRD,SPEC}.md` skeletons + `docs/adr/0001-template-decision.md`.
 6. Creates `docs/plans/active/`, `docs/plans/archive/`, `docs/sessions/` with `.gitkeep`.
-7. Asks the operator: *"Bootstrap cross-tool files (AGENTS.md + .aider.conf.yml)? (Y/n)"*. Default Y.
+7. Asks the operator: *"Bootstrap cross-tool files (.aider.conf.yml)? (Y/n)"*. Default Y.
 8. Asks the operator: *"Bootstrap engineering invariants from batuta-agent-skills? (Y/n)"*. Default Y. On Y, runs `setup-rules.sh --all` which also chains into `setup-code-graph.sh` (engines installed).
 9. If no `.git/`, runs `git init` + first commit. If no remote, asks about creating a private GitHub repo.
 
@@ -90,7 +90,7 @@ See [`ci.md`](ci.md). The plugin does NOT install workflows in your repo automat
 
 ## Cross-tool portability
 
-If the project may be opened in tools other than Claude Code (Aider, Cursor, Codex, etc.), `mode=project-init` step 4a creates `AGENTS.md` and `.aider.conf.yml` automatically. The doc graph (`docs/PRD.md`, `docs/SPEC.md`, `docs/plans/`) is plain Markdown and works in any tool. The runtime layer (PreToolUse hook, audit chain Task delegation) is Claude Code-specific — see [`docs/PORTABILITY.md`](../PORTABILITY.md).
+If the project may be opened in tools other than Claude Code (Aider, Cursor, Codex, etc.), `mode=project-init` step 4a creates `.aider.conf.yml` automatically. The doc graph (`docs/PRD.md`, `docs/SPEC.md`, `docs/plans/`) is plain Markdown and works in any tool. The runtime layer (PreToolUse hook, audit chain Task delegation) is Claude Code-specific — see [`docs/PORTABILITY.md`](../PORTABILITY.md).
 
 ## Per-feature scaffolding
 
@@ -118,7 +118,6 @@ test -f docs/PRD.md
 test -f docs/SPEC.md
 test -f docs/adr/0001-template-decision.md
 test -d docs/plans/active && test -d docs/plans/archive && test -d docs/sessions
-test -f AGENTS.md                                          # cross-tool, manifest projects
 test -L .claude/rules/research-first-citations.md          # if rules opted in
 grep -q '@.claude/rules/' CLAUDE.md                        # if rules opted in
 git log -1 --oneline | grep -q 'project hygiene'           # initial hygiene commit

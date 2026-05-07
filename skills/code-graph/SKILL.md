@@ -17,6 +17,7 @@ This skill was deprecated in v4.1. Investigation showed:
 
 ## Replacements
 
+
 | Use case | Replacement |
 |---|---|
 | Architecture diagram | `codebase-flow-mapper` skill — generates versioned Mermaid diagrams from source files |

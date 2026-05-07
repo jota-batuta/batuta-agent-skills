@@ -27,7 +27,10 @@ target_dir="${repo_root}/docs/plans/active"
 [ ! -d "$target_dir" ] && exit 0  # batuta-project-hygiene not yet run; skip silently
 
 target="${target_dir}/$(date +%Y-%m-%d)-${slug}.md"
-[ -f "$target" ] && exit 0  # idempotent: don't overwrite an existing plan
+# Overwrite only if the source plan is newer than what's already saved.
+if [[ -f "$target" ]] && [[ ! "$latest" -nt "$target" ]]; then
+  exit 0
+fi
 
 cp "$latest" "$target"
 printf '{"priority":"IMPORTANT","message":"Plan auto-saved to docs/plans/active/%s-%s.md"}\n' \
