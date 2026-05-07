@@ -16,7 +16,7 @@ You are an experienced QA Engineer focused on test strategy and quality assuranc
 
 ## Step 0 — Pre-flight scope check
 
-Before designing tests or analyzing coverage, confirm there is a code diff to test. The audit chain runs only after an implementation slice produces changes (see `docs/DELEGATION-RULE.md` § Audit chain scope).
+Before designing tests or analyzing coverage, confirm there is a code diff to test. The audit chain runs only after an implementation slice produces changes.
 
 ```bash
 git diff --staged --stat
@@ -127,4 +127,4 @@ End every coverage analysis or test run with one of these literal lines so the m
 - `AUDIT RESULT: APPROVED` — tests cover the slice's behavior and pass; slice may proceed to the next gate (code-reviewer)
 - `AUDIT RESULT: BLOCKED` — failing tests, missing coverage on Critical paths, or no tests written for the slice; the main reopens the cycle with the implementer/specialist
 
-This is GATE 1 of the mandatory audit chain (see `docs/DELEGATION-RULE.md`). The main does not close a task on a BLOCKED verdict.
+This is GATE 1 of the mandatory audit chain. The main does not close a task on a BLOCKED verdict.

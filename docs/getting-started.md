@@ -3,8 +3,7 @@
 > **Read first** (in this order):
 > 1. [`docs/PRD.md`](PRD.md) — vision, problem, success metrics
 > 2. [`docs/SPEC.md`](SPEC.md) — architecture overview (10 layers including code-graph + supply-chain + runtime CI)
-> 3. [`docs/DELEGATION-RULE.md`](DELEGATION-RULE.md) — native delegation + post-edit audit chain; kill-switch enforcement (v2.7+)
-> 4. [`CLAUDE.md`](../CLAUDE.md) — conventions and session-handoff protocol
+> 3. [`CLAUDE.md`](../CLAUDE.md) — conventions and session-handoff protocol
 >
 > For **operator recipes** (upgrade, code-graph install, retrofit, CI), see [`docs/usage/`](usage/) — brief, action-oriented guides with copy-pasteable commands.
 >
@@ -118,7 +117,7 @@ The `agents/` directory contains six agents — five base + one meta-agent — a
 | `security-auditor.md` | sonnet | GATE 3 — OWASP-grounded vulnerability detection |
 | `agent-architect.md` | sonnet | Meta-agent — creates project-local domain specialists on demand at `<project>/.claude/agents/<name>.md` |
 
-In Claude Code, the main agent invokes these via the `Task` tool. The audit chain (test-engineer → code-reviewer → security-auditor) runs sequentially after the implementer or specialist returns its `READY FOR AUDIT` line. The main does NOT close a task without three `AUDIT RESULT: APPROVED` verdicts. Full contract: [`docs/DELEGATION-RULE.md`](DELEGATION-RULE.md).
+In Claude Code, the main agent invokes these via the `Task` tool. The audit chain (test-engineer → code-reviewer → security-auditor) runs sequentially after the implementer or specialist returns its `READY FOR AUDIT` line. The main does NOT close a task without three `AUDIT RESULT: APPROVED` verdicts.
 
 In other tools without `Task` support, load the agent body as static context and execute its workflow manually.
 

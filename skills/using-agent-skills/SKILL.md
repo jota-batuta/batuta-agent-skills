@@ -22,7 +22,7 @@ Task arrives
     ├── Slice needs domain expertise   ──→ agent-architect
     │   not covered by base agents?       (creates project-local specialist
     │                                      on demand, discovery-first; see
-    │                                      docs/DELEGATION-RULE-SPECIALISTS.md)
+    │                                      rules/core/model-routing.md)
     ├── Implementing code? ────────────→ incremental-implementation
     │   ├── UI work? ─────────────────→ frontend-ui-engineering
     │   ├── API work? ────────────────→ api-and-interface-design
