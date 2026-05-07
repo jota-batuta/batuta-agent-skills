@@ -3,35 +3,51 @@
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/hooks-health.sh",
-        "timeout": 5
-      },
-      {
-        "type": "command",
-        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh",
-        "timeout": 15
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/hooks-health.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh",
+            "timeout": 15
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
-        "type": "command",
-        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/clear-intent-marker.sh",
-        "timeout": 5
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/clear-intent-marker.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "ExitPlanMode",
-        "type": "command",
-        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-exit-plan-mode.sh",
-        "timeout": 10
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-exit-plan-mode.sh",
+            "timeout": 10
+          }
+        ]
       },
       {
         "matcher": "Write|Edit",
-        "type": "command",
-        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-citation-warn.sh",
-        "timeout": 10
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-citation-warn.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
