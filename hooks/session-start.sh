@@ -16,6 +16,7 @@ trap 'exit 0' ERR
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILLS_DIR="$(dirname "$SCRIPT_DIR")/skills"
 META_SKILL="$SKILLS_DIR/using-agent-skills/SKILL.md"
+CONTEXT_SKILL="$SKILLS_DIR/context-engineering/SKILL.md"
 
 # ---------------------------------------------------------------------------
 # Part 1 — meta-skill content (always injected)
@@ -23,6 +24,12 @@ META_SKILL="$SKILLS_DIR/using-agent-skills/SKILL.md"
 meta_content=""
 if [ -f "$META_SKILL" ]; then
   meta_content=$(cat "$META_SKILL" 2>/dev/null)
+fi
+if [ -f "$CONTEXT_SKILL" ]; then
+  context_content=$(cat "$CONTEXT_SKILL" 2>/dev/null)
+  if [ -n "$context_content" ]; then
+    meta_content="${meta_content}"$'\n\n---\n\n'"${context_content}"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
