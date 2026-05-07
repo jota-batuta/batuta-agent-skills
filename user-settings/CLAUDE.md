@@ -45,7 +45,7 @@ Before creating any of the following files, the agent MUST invoke the correspond
 
 Editing existing files in those paths is unrestricted. Bypass via the corresponding `BATUTA_*_BYPASS=1` env var on the launching shell. Mechanism details in `rules/authoring/`.
 
-## Intent capture (every operator turn) — v4.5
+## Intent capture (every operator turn) — v4.6
 
 Before any `Edit`/`Write`/`Bash`/`Task` tool call:
 
@@ -53,11 +53,11 @@ Before any `Edit`/`Write`/`Bash`/`Task` tool call:
 2. **Tier assignment** — trivial IFF ALL FIVE: ≤3 files, ≤20 LOC, no new control flow, no new dep, category in `typo`/`copy`/`css`/`rename`/`comment`/`string-literal`/`version-bump`. Else standard.
 3. Standard tier → grill (one Q per turn) until scope/acceptance clear. Trivial tier → skip grill.
 4. Capture JSON intent (declares `tier`) → present in ONE block with the routing declaration (subagent vs main-direct per file or scope).
-5. Wait for SINGLE operator confirmation ("dale", "procedé", "sí, go ahead") — covers both intent and routing.
-6. On confirm → write combined marker `<project>/.claude/.intent-and-routing-confirmed-<ISO>`. For standard tier: also write `<project>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` to disk (NOT committed individually — bundles at slice close per Git policy). For trivial tier: no `docs/intents/` file; the intent is recorded as a one-line entry in the slice's session journal.
+5. Immediately write pending marker `<project>/.claude/.intent-pending-<ISO>` (contains SHA256 of intent JSON) IN THE SAME RESPONSE as Step 4 — before the operator replies. The `clear-intent-marker.sh` hook promotes it to `.intent-and-routing-confirmed-<ISO>` when the operator sends the confirmation. Do NOT wait until after confirmation to write the marker: the hook runs at the START of the operator's turn, so a marker written after "dale" arrives is always one turn late.
+6. Wait for SINGLE operator confirmation ("dale", "procedé", "sí, go ahead") — covers both intent and routing. For standard tier: also write `<project>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` to disk (NOT committed individually — bundles at slice close per Git policy). For trivial tier: no `docs/intents/` file.
 7. Execute.
 
-The UserPromptSubmit hook clears markers and injects a routing classifier (~25 tokens) per turn. Subagents bypass via `agent_id`. Bypass: `BATUTA_INTENT_BYPASS=1` on the launching shell. Legacy markers `.intent-confirmed-*` and `.routing-confirmed-*` are honored for one release cycle and removed in v4.6. Full protocol in `rules/core/intent-capture-required.md`.
+The UserPromptSubmit hook promotes pending→confirmed markers (two-phase, v4.6) and injects a routing classifier (~25 tokens) per turn. The gate checks for hook-written `.intent-and-routing-confirmed-*` markers — the model MUST NOT write confirmed markers directly (`delegation-guard.sh` blocks this). **The pending marker MUST be written in the same response as Step 4 (presenting intent), not after receiving the operator's "dale".** Subagents bypass via `agent_id`. Bypass: `BATUTA_INTENT_BYPASS=1` on the launching shell. Legacy markers `.intent-confirmed-*` and `.routing-confirmed-*` are honored for one release cycle. Full protocol in `rules/core/intent-capture-required.md` (also imported by opencode via `opencode.json`).
 
 ## Delegation
 
