@@ -1,7 +1,12 @@
 {
-  "description": "Batuta agent skills: native-delegation main + post-edit audit chain + kill-switches + pr-merge guard + per-turn intent gate",
+  "description": "Batuta agent skills: native-delegation main + post-edit audit chain + kill-switches + pr-merge guard + per-turn intent gate + session hooks-health + pr-create guard + citation-warn",
   "hooks": {
     "SessionStart": [
+      {
+        "type": "command",
+        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/hooks-health.sh",
+        "timeout": 5
+      },
       {
         "type": "command",
         "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.sh",
@@ -20,6 +25,12 @@
         "matcher": "ExitPlanMode",
         "type": "command",
         "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-exit-plan-mode.sh",
+        "timeout": 10
+      },
+      {
+        "matcher": "Write|Edit",
+        "type": "command",
+        "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-citation-warn.sh",
         "timeout": 10
       }
     ],
@@ -60,6 +71,11 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/pr-merge-guard.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/pre-pr-create-guard.sh",
             "timeout": 10
           },
           {

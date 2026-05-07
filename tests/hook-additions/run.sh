@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# run.sh — intent-gate test suite (v4.5).
-# Validates the three hooks (pre-edit-intent-gate.sh, pre-task-routing-gate.sh,
-# clear-intent-marker.sh) against the v4.5 combined-marker contract.
-# Exit 0 on all-pass.
+# run.sh — hook-additions test suite.
+# Runs all test-NN-*.sh scripts in order. Exit 0 on all-pass.
 
 set -uo pipefail
 
@@ -13,24 +11,22 @@ export REPO_ROOT
 cd "${REPO_ROOT}"
 
 cases=(
-  "01-edit-no-marker-blocks.sh"
-  "02-edit-combined-marker-allows.sh"
-  "03-edit-legacy-intent-marker-allows.sh"
-  "04-routing-no-marker-blocks.sh"
-  "05-routing-combined-marker-allows.sh"
-  "06-routing-legacy-routing-marker-allows.sh"
-  "07-clear-deletes-combined-marker.sh"
-  "08-pending-dale-promotes-to-confirmed.sh"
-  "09-non-confirmation-clears-pending.sh"
-  "10-no-pending-dale-noop.sh"
-  "11-promotion-preserves-content.sh"
+  "test-01-hooks-health-pass.sh"
+  "test-02-hooks-health-stale-marker-warn.sh"
+  "test-03-pr-create-guard-no-intents-pass.sh"
+  "test-04-pr-create-guard-uncommitted-intents-block.sh"
+  "test-05-pr-create-guard-no-plan-block.sh"
+  "test-06-pr-create-guard-bypass-pass.sh"
+  "test-07-citation-warn-import-no-source-warns.sh"
+  "test-08-citation-warn-import-with-source-silent.sh"
+  "test-09-citation-warn-stdlib-silent.sh"
 )
 
 pass=0
 fail=0
 fail_names=()
 
-echo "=== intent-gate test suite (v4.5) ==="
+echo "=== hook-additions test suite ==="
 echo "Repo root: ${REPO_ROOT}"
 echo
 

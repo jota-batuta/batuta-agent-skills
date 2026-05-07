@@ -62,19 +62,22 @@ if [[ -n "$project_root" ]]; then
     # ============================================================================
     if command -v jq >/dev/null 2>&1 && [[ -n "$user_prompt" ]]; then
       prompt_trimmed=$(echo "$user_prompt" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-      if echo "$prompt_trimmed" | grep -qiE \
-          '^(dale|procedé|procede|proceda|go[[:space:]]+ahead|proceed|yes|okey|ok|confirmo|confirmed|ejecuta|hacelo|hazlo|go|sí|si|approved|listo|aprobado|continue)[.!,]?$'; then
+      # Use bash [[ =~ ]] — $ is end-of-string, not end-of-line (unlike grep -E).
+      # This prevents multi-line prompt injection from triggering a false confirmation.
+      if [[ "$prompt_trimmed" =~ ^(dale|procedé|procede|proceda|go[[:space:]]+ahead|proceed|yes|okey|ok|confirmo|confirmed|ejecuta|hacelo|hazlo|go|sí|si|approved|listo|aprobado|continue)[.!,]?$ ]]; then
         shopt -s nullglob
         pending_markers=("$marker_dir"/.intent-pending-*)
         shopt -u nullglob
         if [[ ${#pending_markers[@]} -gt 0 ]]; then
           iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           confirmed_marker="$marker_dir/.intent-and-routing-confirmed-${iso}"
-          cp "${pending_markers[0]}" "$confirmed_marker" 2>/dev/null || \
+          if cp "${pending_markers[0]}" "$confirmed_marker" 2>/dev/null; then
+            promoted=1
+            rm -f "${pending_markers[@]}" 2>/dev/null
+            echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh promoted ${#pending_markers[@]} pending marker(s) to confirmed: $confirmed_marker" >> "$marker_dir/kb-debug.log" 2>/dev/null
+          else
             echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh: copy pending→confirmed failed" >> "$marker_dir/kb-debug.log" 2>/dev/null
-          rm -f "${pending_markers[@]}" 2>/dev/null
-          echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) clear-intent-marker.sh promoted ${#pending_markers[@]} pending marker(s) to confirmed: $confirmed_marker" >> "$marker_dir/kb-debug.log" 2>/dev/null
-          promoted=1
+          fi
         fi
       fi
     fi

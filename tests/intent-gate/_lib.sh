@@ -138,21 +138,21 @@ setup_project_root() {
 write_combined_marker() {
   local iso
   iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  touch "$PROJECT_ROOT/.claude/.intent-and-routing-confirmed-${iso}"
+  printf '%s' "sha256-placeholder" > "$PROJECT_ROOT/.claude/.intent-and-routing-confirmed-${iso}"
 }
 
 # Write the legacy v4.2-v4.4 intent-only marker.
 write_legacy_intent_marker() {
   local iso
   iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  touch "$PROJECT_ROOT/.claude/.intent-confirmed-${iso}"
+  printf '%s' "sha256-placeholder" > "$PROJECT_ROOT/.claude/.intent-confirmed-${iso}"
 }
 
 # Write the legacy v4.4 routing-only marker.
 write_legacy_routing_marker() {
   local iso
   iso=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  touch "$PROJECT_ROOT/.claude/.routing-confirmed-${iso}"
+  printf '%s' "sha256-placeholder" > "$PROJECT_ROOT/.claude/.routing-confirmed-${iso}"
 }
 
 # ---------------------------------------------------------------------------

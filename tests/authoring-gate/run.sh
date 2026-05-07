@@ -23,6 +23,10 @@ cases=(
   "09-agent-project-local-no-origin-check.sh"
   "10-agent-bypass-env-allows.sh"
   "11-skill-edit-existing-allows.sh"
+  "12-feature-no-marker-blocks.sh"
+  "13-feature-fresh-marker-allows.sh"
+  "14-feature-stale-marker-blocks.sh"
+  "15-feature-bypass-allows.sh"
 )
 
 pass=0

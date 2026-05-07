@@ -54,6 +54,7 @@ check_present '\.claude/agents/\*|\.claude/agents/' "kill-switch: .claude/agents
 check_present '\.env\b|/\.env\b' "kill-switch: .env"
 check_present '\.envrc|\.envrc' "kill-switch: .envrc"
 check_present 'secrets/' "kill-switch: secrets/*"
+check_present '\.intent-and-routing-confirmed' "kill-switch: .intent-and-routing-confirmed-* (v4.6 model-write block)"
 
 # --- Failure-mode: fail-open (exit 0) on empty/unparseable path (v2.7 flip) ---
 # The v2.7 hook must exit 0 (allow) when file_path is empty — which covers the case

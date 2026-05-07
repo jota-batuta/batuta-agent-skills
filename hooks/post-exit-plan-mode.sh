@@ -34,4 +34,4 @@ fi
 
 cp "$latest" "$target"
 printf '{"priority":"IMPORTANT","message":"Plan auto-saved to docs/plans/active/%s-%s.md"}\n' \
-  "$(date +%Y-%m-%d)" "$slug" >&2
+  "$(date +%Y-%m-%d)" "$slug"

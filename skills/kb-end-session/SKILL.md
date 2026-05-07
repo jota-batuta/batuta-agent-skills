@@ -21,6 +21,47 @@ Do NOT use as a substitute for `/kb-curate` on a broader scope — this skill is
 
 ## Process
 
+### Step 0: Precondition check (before writing journal)
+
+**1. Check commits exist this session**
+
+Run:
+
+```bash
+git log --oneline --since="$(date -d 'today 00:00' '+%Y-%m-%d %H:%M')" 2>/dev/null | head -5
+```
+
+If the output is empty, ask the operator:
+
+> "No commits found this session. Close session journal anyway? (y/n)"
+
+If the operator answers **no** → exit without writing the journal. The "When to Use" section states this skill is for sessions where commits were made or decisions were taken.
+
+If the operator answers **yes** → continue to Step 1.
+
+**2. Check for a pending intent marker**
+
+If any file matching `.claude/.intent-pending-*` exists, warn:
+
+> "Unconfirmed intent marker present. Resolve intent before closing session."
+
+Do not block — this is informational. The operator may choose to continue.
+
+**3. Check for uncommitted intent files**
+
+Run:
+
+```bash
+git diff --name-only HEAD -- docs/intents/
+git ls-files --others --exclude-standard docs/intents/
+```
+
+If either command produces output, warn:
+
+> "Uncommitted intent files found in docs/intents/. Per policy these should be bundled with their slice commit. Bundle now or proceed anyway?"
+
+Do not block — this is informational. If the operator wants to bundle, handle the commit before continuing to Step 1.
+
 ### Step 1: Validate prerequisites
 
 Read `.claude/kb-config.json`. If absent, exit with:

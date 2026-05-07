@@ -150,3 +150,9 @@ For every PR / commit that touches code:
 3. **Version match**: the version in the comment must match the version in the dependency manifest.
 
 If any check fails, do not commit. Add or fix citations.
+
+### Automatic safety net (hook)
+
+`hooks/post-edit-citation-warn.sh` runs automatically after every `Write` or `Edit` to Python/TypeScript/JavaScript files. If it detects an `import` statement without a preceding `# Source:` or `// Source:` comment, it emits a warning in the model's context.
+
+This hook is a backstop, not a substitute for proactive lookup. The skill's Step 1 (Context7 lookup) must still run before writing code — the hook only catches missed citations after the fact.
