@@ -231,7 +231,18 @@ print("{}|{}|{}|{}".format(
 fi
 
 # ---------------------------------------------------------------------------
-# Part 3 — Assemble the final message and emit JSON
+# Part 3 — Write session-context marker (consumed by pre-session-context-gate.sh)
+# ---------------------------------------------------------------------------
+# Date-scoped: one marker per UTC day. The gate blocks Edit/Write/Bash until
+# this marker exists, ensuring context-engineering ran before any work starts.
+if [[ -n "$repo_root" ]]; then
+  marker_dir="$repo_root/.claude"
+  mkdir -p "$marker_dir" 2>/dev/null
+  touch "$marker_dir/.session-context-loaded-$(date -u +%Y-%m-%d)" 2>/dev/null
+fi
+
+# ---------------------------------------------------------------------------
+# Part 4 — Assemble the final message and emit JSON
 # ---------------------------------------------------------------------------
 # The message combines the meta-skill content and the KB context block.
 # We use jq to build the JSON so that special characters (quotes, backslashes,
