@@ -23,7 +23,7 @@
 #
 # Output protocol:
 #   exit 0 → allow the tool call
-#   exit 1 → block the tool call (stderr is shown to the model as the block reason)
+#   exit 2 → block the tool call (stderr is shown to the model as the block reason)
 #
 # Source: https://docs.anthropic.com/en/docs/claude-code/hooks (verified 2026-05-06, Claude Code 2.x)
 
@@ -56,7 +56,7 @@ file_path="${file_path//\\//}"
 case "$file_path" in
   ../*|*/..|*/../*|..)
     echo "pre-write-feature-gate.sh: path contains '..' as a segment. Refusing." >&2
-    exit 1
+    exit 2
     ;;
 esac
 
@@ -156,4 +156,4 @@ restart Claude Code with the operator-side env var:
 
 Full skill: skills/batuta-project-hygiene/SKILL.md (mode: feature-init)
 EOF
-exit 1
+exit 2

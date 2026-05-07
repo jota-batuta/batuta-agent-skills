@@ -16,7 +16,7 @@
 #
 # Output protocol:
 #   exit 0 → allow the tool call
-#   exit 1 → block the tool call (stderr is shown to the model as the block reason)
+#   exit 2 → block the tool call (stderr is shown to the model as the block reason)
 #
 # Source: https://code.claude.com/docs/en/hooks (verified 2026-04-29, Claude Code 1.x)
 
@@ -89,4 +89,4 @@ the request to the operator and stop.
 
 Command attempted: ${bash_command}
 EOF
-exit 1
+exit 2

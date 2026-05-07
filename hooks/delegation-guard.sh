@@ -26,8 +26,8 @@
 #
 # Output protocol (Claude Code hooks reference):
 #   exit 0 → allow the tool call
-#   exit 1 → block the tool call (stderr is shown to the model as the block reason)
-#   (exit 2 also blocks; this hook uses exit 1 for clarity on kill-switch hits)
+#   exit 2 → block the tool call (stderr is shown to the model as the block reason)
+#   (this hook uses exit 2 for clarity on kill-switch hits)
 #
 # Security invariants maintained (regressions MUST be flagged):
 #   - file_path and agent_id NEVER reach a shell-execution context (eval/$(...)/backticks).
@@ -77,7 +77,7 @@ case "$file_path" in
   ../*|*/..|*/../*|..)
     echo "delegation-guard.sh: path contains '..' as a segment (potential traversal). Refusing for safety." >&2
     echo "Path received: $file_path" >&2
-    exit 1
+    exit 2
     ;;
 esac
 
@@ -103,7 +103,7 @@ This file controls plugin enforcement; modifying it from the main would self-dis
 Delegate to a subagent (haiku for trivial edits, implementer for substantive changes), or update via the plugin's installation flow.
 Use Write to \`.intent-pending-*\` instead — the hook promotes pending to confirmed on operator confirmation.
 EOF
-    exit 1
+    exit 2
     ;;
 esac
 
