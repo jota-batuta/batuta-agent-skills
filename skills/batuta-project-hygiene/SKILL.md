@@ -224,31 +224,6 @@ Do NOT trigger:
 
    **Skip each file if it already exists (idempotent).**
 
-   `AGENTS.md` (project root, ≤ 30 lines) — mirrors CLAUDE.md essentials in the cross-tool AGENTS.md standard so agents other than Claude Code can orient themselves. Points to docs/ — does NOT duplicate full content:
-
-   ```markdown
-   # AGENTS.md — <project-name>
-
-   > Cross-tool agent instructions. For Claude Code, see CLAUDE.md.
-   > Rule #0: read docs/DELEGATION-RULE.md before touching any file.
-
-   ## Project overview
-   <TODO: one-sentence summary — copy from docs/PRD.md when filled>
-
-   ## Doc graph
-   | Doc | Purpose |
-   |---|---|
-   | [docs/PRD.md](docs/PRD.md) | Vision, constraints, success metrics |
-   | [docs/SPEC.md](docs/SPEC.md) | Architecture overview and component map |
-   | [docs/plans/active/](docs/plans/active/) | Active task plans (start here for open work) |
-   | [docs/sessions/](docs/sessions/) | Session journals — last entry has "Next entry point" |
-   | [docs/adr/](docs/adr/) | Architecture decision records |
-
-   ## Rule #0 summary
-   Delegate only. Never invent an approach not in a plan or spec.
-   Full rule: [docs/DELEGATION-RULE.md](docs/DELEGATION-RULE.md)
-   ```
-
    `.aider.conf.yml` (project root, ≤ 15 lines) — created by default (or if the operator mentions Aider); skip otherwise. Lists the key context files so Aider's `--read` flag picks them up automatically:
 
    ```yaml
@@ -258,14 +233,14 @@ Do NOT trigger:
    # auto-commits: false ensures Aider does not silently rewrite files outside the audit cycle.
    # Consider also setting auto-lint: false if your linter could mutate files unexpectedly.
    read:
-     - AGENTS.md
+     - CLAUDE.md
      - docs/PRD.md
      - docs/SPEC.md
      - docs/plans/active/
    auto-commits: false
    ```
 
-   **Do NOT create** `.cursor/rules/`, `GEMINI.md`, or `.windsurfrules` — the operator opts into those per-tool. `AGENTS.md` and `.aider.conf.yml` are the only auto-bootstrapped cross-tool files.
+   **Do NOT create** `.cursor/rules/`, `GEMINI.md`, or `.windsurfrules` — the operator opts into those per-tool. `.aider.conf.yml` is the only auto-bootstrapped cross-tool file.
 
 4b. **Engineering invariants bootstrap (auto-apply, no prompt)** — for projects with a manifest (`package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`), run the following automatically. Skip only on pure-docs repos with no manifest markers. Do NOT ask the operator.
 
@@ -369,7 +344,6 @@ Do NOT trigger:
    - `./CLAUDE.md` exists and contains `## Mandatory Skills for Batuta Projects`
    - `test -f docs/PRD.md && test -f docs/SPEC.md && test -f docs/adr/0001-template-decision.md`
    - `test -d docs/plans/active && test -d docs/plans/archive && test -d docs/sessions`
-   - `test -f AGENTS.md` (cross-tool bootstrap ran for manifest project)
    - `test -f .aider.conf.yml || echo skipped` (skipped for pure-docs repos or if operator opted out)
    - `git log -1 --oneline` shows the hygiene commit
    - `git remote get-url origin` returns a URL (if GitHub step ran)
@@ -557,7 +531,6 @@ test -f docs/SPEC.md                                       # SPEC skeleton creat
 test -f docs/adr/0001-template-decision.md                 # ADR template created
 test -d docs/plans/active && test -d docs/plans/archive    # plans dirs exist
 test -d docs/sessions                                      # sessions dir exists
-test -f AGENTS.md                                          # cross-tool bootstrap (manifest projects)
 test -f .aider.conf.yml || echo skipped                    # Aider config (skipped for pure-docs repos)
 test -L .claude/rules/research-first-citations.md || echo skipped  # rules bootstrap (opted-in)
 grep -q "@.claude/rules/" CLAUDE.md || echo skipped        # invariants import present (opted-in)

@@ -75,7 +75,6 @@ Create a rules file that persists across sessions. This is the highest-leverage 
 - `.cursorrules` or `.cursor/rules/*.md` (Cursor)
 - `.windsurfrules` (Windsurf)
 - `.github/copilot-instructions.md` (GitHub Copilot)
-- `AGENTS.md` (OpenAI Codex)
 
 ### Level 2: Specs and Architecture
 

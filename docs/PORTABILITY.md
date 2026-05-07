@@ -15,7 +15,7 @@ The doc graph is pure Markdown and loads into any tool that reads project files:
 - `docs/plans/active/<file>.md` — the in-flight plan
 - `docs/plans/archive/` — historical plans
 - `docs/sessions/<file>.md` — session journals (the most recent one's `Next:` line is the entry point)
-- `CLAUDE.md` and `AGENTS.md` — conventions (CLAUDE.md preferred by Claude Code, AGENTS.md preferred by Codex CLI / Cursor / Aider / Gemini / OpenCode / Windsurf as fallback)
+- `CLAUDE.md` — conventions
 - `git log` — the actual recent activity, which contradicts stale docs when present
 - The agent definitions in `agents/*.md` — readable as static context describing what each role would do
 
@@ -32,7 +32,7 @@ The doc graph is pure Markdown and loads into any tool that reads project files:
 When you open a session in any tool — Claude Code or otherwise — read in this order before doing anything:
 
 1. `docs/PRD.md` (project vision)
-2. `CLAUDE.md` and/or `AGENTS.md` (conventions)
+2. `CLAUDE.md` (conventions)
 3. `docs/plans/active/*.md` (one file expected — the in-flight plan)
 4. `docs/sessions/*.md` (most recent — its `Next:` line is your entry point)
 5. `git log --oneline -10` (the actual ground truth when docs lag)
@@ -51,16 +51,16 @@ In a tool without PreToolUse hooks, you (the operator) become the enforcement la
 
 This is slower and weaker than the runtime enforcement in Claude Code. The doc graph is what makes the switch survivable: by reading the same artifacts, the alternative tool can produce the same shape of output, even without the runtime guard.
 
-**Secrets warning.** Cross-tool config files (`AGENTS.md`, `.aider.conf.yml`, `.cursor/rules/`, `GEMINI.md`, `.windsurfrules`) are committed to the repo by default. Do NOT paste API keys, tokens, or environment-variable values into any of them. The `read:` directives should reference files like `docs/PRD.md` and `docs/SPEC.md`, not `.env` or `secrets.yaml`.
+**Secrets warning.** Cross-tool config files (`.aider.conf.yml`, `.cursor/rules/`, `GEMINI.md`, `.windsurfrules`) are committed to the repo by default. Do NOT paste API keys, tokens, or environment-variable values into any of them. The `read:` directives should reference files like `docs/PRD.md` and `docs/SPEC.md`, not `.env` or `secrets.yaml`.
 
 ## Tool-specific notes
 
-- **Codex CLI:** reads `AGENTS.md` natively. Place `read: docs/PRD.md, docs/SPEC.md, docs/plans/active/*` in your config or paste the content at session start.
-- **Cursor:** reads `AGENTS.md` as a complement to `.cursor/rules/`. The Custom Modes feature can approximate per-agent personas but does not return verdicts to a parent agent.
-- **Aider:** add `read: [AGENTS.md, docs/SPEC.md, docs/plans/active/]` to `.aider.conf.yml`. The architect/editor split is a weak two-step substitute for the audit chain.
-- **Gemini CLI:** reads `GEMINI.md` natively. `AGENTS.md` is supplementary — point Gemini at it via include/read directives in `GEMINI.md` to pick up the cross-tool conventions.
+- **Codex CLI:** place `read: docs/PRD.md, docs/SPEC.md, docs/plans/active/*` in your config or paste the content at session start.
+- **Cursor:** use `.cursor/rules/` to load project conventions. The Custom Modes feature can approximate per-agent personas but does not return verdicts to a parent agent.
+- **Aider:** add `read: [CLAUDE.md, docs/SPEC.md, docs/plans/active/]` to `.aider.conf.yml`. The architect/editor split is a weak two-step substitute for the audit chain.
+- **Gemini CLI:** reads `GEMINI.md` natively. Point it at `CLAUDE.md` and `docs/SPEC.md` via include/read directives.
 - **OpenCode:** see [`opencode-setup.md`](opencode-setup.md). Skill auto-routing works; the audit chain does not.
-- **Windsurf:** alias for `AGENTS.md` via `.windsurfrules`. Same approach as Cursor.
+- **Windsurf:** use `.windsurfrules` to load conventions. Same approach as Cursor.
 
 ## When to switch back to Claude Code
 
