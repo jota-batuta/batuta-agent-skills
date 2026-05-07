@@ -64,7 +64,7 @@ fi
 marker_dir="$project_root/.claude"
 marker=""
 if [[ -d "$marker_dir" ]]; then
-  marker=$(find "$marker_dir" -maxdepth 1 \( -name '.intent-and-routing-confirmed-*' -o -name '.routing-confirmed-*' \) -print -quit 2>/dev/null)
+  marker=$(find "$marker_dir" -maxdepth 1 -not -empty \( -name '.intent-and-routing-confirmed-*' -o -name '.routing-confirmed-*' \) -print -quit 2>/dev/null)
 fi
 
 if [[ -n "$marker" ]]; then

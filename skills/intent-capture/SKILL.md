@@ -78,7 +78,7 @@ Build the JSON object conformant to `references/intent-schema.json`:
 
 ### Step 4: Present (intent + routing in ONE block)
 
-**Standard tier** — display the full JSON in a fenced markdown block AND a routing table (per file or per ask). Add one closing line: "Is this everything? On 'dale' I write the combined marker and execute."
+**Standard tier** — display the full JSON in a fenced markdown block AND a routing table (per file or per ask). Add one closing line: "Is this everything? On 'dale' I write the pending marker; the hook promotes it to confirmed when you send your approval, then I execute."
 
 **Trivial tier** — display a one-line summary instead of the full JSON. Format: `Trivial tier — {category}: {refined_text}. Files: {paths}. Routing: main-direct. ¿Dale?`. The full JSON is still constructed in memory (for the audit trail) but not displayed.
 
@@ -89,7 +89,7 @@ If the operator adds new asks → loop back to Step 2 (standard) or Step 1b (re-
 Wait for explicit confirmation ("yes, go ahead", "that's it", "proceed", "dale", or equivalent). The single confirmation covers BOTH intent and routing — there is no second approval. On confirm:
 
 - Set `status: "confirmed"`, record `confirmed_at` and `confirmed_via`.
-- **Write the combined marker** (Claude-Code-only enforcement; opencode skips this step): `<project-root>/.claude/.intent-and-routing-confirmed-<ISO-timestamp>` (UTC, RFC 3339, e.g. `.intent-and-routing-confirmed-2026-05-05T17:00:00Z`). Empty file. Gitignored. Valid until next UserPromptSubmit invalidates it. Consumed by both `pre-edit-intent-gate.sh` and `pre-task-routing-gate.sh`.
+- **Write the pending marker** (Claude-Code-only enforcement; opencode skips this step): `<project-root>/.claude/.intent-pending-<ISO-timestamp>` (UTC, RFC 3339, e.g. `.intent-pending-2026-05-06T17:00:00Z`). Must be non-empty — write the SHA-256 hash of the confirmed intent JSON as content. Gitignored. The `clear-intent-marker.sh` UserPromptSubmit hook promotes this to `.intent-and-routing-confirmed-<ISO>` when the operator's next message exactly matches a confirmation phrase (e.g. 'dale', 'proceed', 'yes'). Until promoted, the execution gates block all Bash/Edit/Write — the model must wait for the operator's confirmation message before executing.
 - **Persist the record (standard tier only)**: write `<project-root>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` — markdown with YAML frontmatter (status, captured_at, confirmed_at, operator_id, agent_version, category, related_pr, related_branch, related_plan) and a narrative body (Original ask, Refined intent, Scope in/out, Acceptance, Routing declaration, Outcome, Original JSON in fenced block). The file is **written to disk immediately** but **NOT committed individually** — it bundles into the slice-close commit per Lever 4. See `docs/intents/README.md` for format.
 - **Trivial tier**: NO `docs/intents/` file is created. The intent is recorded in the slice's session journal (Lever 4) as a one-line entry at slice close.
 
