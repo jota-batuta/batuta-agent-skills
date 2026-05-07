@@ -23,7 +23,7 @@
 #
 # Output protocol:
 #   exit 0 → allow
-#   exit 1 → block (stderr shown to model)
+#   exit 2 → block (stderr shown to model)
 
 set -uo pipefail
 
@@ -84,7 +84,7 @@ How to unblock:
 
 Rule: skills/context-engineering/SKILL.md
 EOF
-  exit 1
+  exit 2
 fi
 
 # ============================================================================
@@ -100,7 +100,7 @@ file_path="${file_path//\\//}"
 case "$file_path" in
   ../*|*/..|*/../*|..)
     echo "pre-session-context-gate.sh: path contains '..' as a segment. Refusing." >&2
-    exit 1
+    exit 2
     ;;
 esac
 
@@ -171,4 +171,4 @@ How to unblock:
 
 Rule: skills/context-engineering/SKILL.md
 EOF
-exit 1
+exit 2

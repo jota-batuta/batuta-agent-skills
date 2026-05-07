@@ -14,7 +14,7 @@
 #
 # Output protocol:
 #   exit 0 → allow the tool call
-#   exit 1 → block the tool call (stderr is shown to the model)
+#   exit 2 → block the tool call (stderr is shown to the model)
 #
 # Source: https://code.claude.com/docs/en/hooks (verified 2026-04-29, Claude Code 1.x)
 
@@ -37,7 +37,7 @@ file_path="${file_path//\\//}"
 case "$file_path" in
   ../*|*/..|*/../*|..)
     echo "pre-write-agent-gate.sh: path contains '..' as a segment. Refusing." >&2
-    exit 1
+    exit 2
     ;;
 esac
 
@@ -146,4 +146,4 @@ To bypass for legitimate cosmetic edits, restart Claude Code with:
 
 Full rule: $plugin_root/rules/authoring/agent-authoring-required.md
 EOF
-exit 1
+exit 2

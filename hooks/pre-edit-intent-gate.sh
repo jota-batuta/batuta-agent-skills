@@ -29,7 +29,7 @@
 #
 # Output protocol:
 #   exit 0 → allow
-#   exit 1 → block (stderr shown to model)
+#   exit 2 → block (stderr shown to model)
 #
 # Source: https://docs.claude.com/en/docs/claude-code/hooks (verified 2026-05-04, Claude Code 2.x)
 
@@ -103,7 +103,7 @@ To bypass for legitimate quick fixes, restart Claude Code with:
 
 Rule: rules/core/intent-capture-required.md
 EOF
-  exit 1
+  exit 2
 fi
 
 # ============================================================================
@@ -119,7 +119,7 @@ file_path="${file_path//\\//}"
 case "$file_path" in
   ../*|*/..|*/../*|..)
     echo "pre-edit-intent-gate.sh: path contains '..' as a segment. Refusing." >&2
-    exit 1
+    exit 2
     ;;
 esac
 
@@ -200,4 +200,4 @@ To bypass for legitimate quick fixes, restart Claude Code with:
 
 Rule: rules/core/intent-capture-required.md
 EOF
-exit 1
+exit 2

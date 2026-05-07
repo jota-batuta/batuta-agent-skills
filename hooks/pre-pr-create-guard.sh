@@ -10,7 +10,7 @@
 #
 # Output protocol:
 #   exit 0 → allow
-#   exit 1 → block (stderr shown to the model)
+#   exit 2 → block (stderr shown to the model)
 #
 # Source: https://docs.claude.com/en/docs/claude-code/hooks (verified 2026-05-07, Claude Code 2.x)
 
@@ -20,7 +20,7 @@ set -uo pipefail
 # error should stop the PR, not silently allow it.
 handle_error() {
   echo "[pre-pr-create-guard] ERROR: unexpected error at line ${BASH_LINENO[0]}. Blocking gh pr create for safety." >&2
-  exit 1
+  exit 2
 }
 trap 'handle_error' ERR
 
@@ -76,7 +76,7 @@ uncommitted=$(
 
 if [[ -n "$uncommitted" ]]; then
   echo "[pre-pr-create-guard] BLOCKED: Intent files not bundled: bundle docs/intents/ in a commit before opening PR, or use BATUTA_ALLOW_PR_CREATE=1" >&2
-  exit 1
+  exit 2
 fi
 
 # ── Check 2: active plan exists ───────────────────────────────────────────────
@@ -84,7 +84,7 @@ plan_count=$(find "$project_root/docs/plans/active" -name "*.md" 2>/dev/null | w
 
 if [[ "$plan_count" -eq 0 ]]; then
   echo "[pre-pr-create-guard] BLOCKED: No active plan found in docs/plans/active/. Open a PR without a plan only with BATUTA_ALLOW_PR_CREATE=1" >&2
-  exit 1
+  exit 2
 fi
 
 # ── Check 3: no stale intent-pending marker (>60 min) ────────────────────────
@@ -92,7 +92,7 @@ stale_pending=$(find "$project_root/.claude" -name ".intent-pending-*" -mmin +60
 
 if [[ -n "$stale_pending" ]]; then
   echo "[pre-pr-create-guard] BLOCKED: Stale intent-pending marker — resolve intent before creating PR. Bypass: BATUTA_ALLOW_PR_CREATE=1" >&2
-  exit 1
+  exit 2
 fi
 
 exit 0

@@ -24,7 +24,7 @@
 #
 # Output protocol:
 #   exit 0 → allow
-#   exit 1 → block (stderr shown to model)
+#   exit 2 → block (stderr shown to model)
 #
 # Source: https://docs.claude.com/en/docs/claude-code/hooks (verified 2026-05-05, Claude Code 2.x)
 
@@ -87,4 +87,4 @@ Bypass: BATUTA_INTENT_BYPASS=1 (operator-side env var on launching shell).
 
 Rule: rules/core/intent-capture-required.md (v4.5)
 EOF
-exit 1
+exit 2
