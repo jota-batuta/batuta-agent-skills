@@ -57,7 +57,7 @@ Before any `Edit`/`Write`/`Bash`/`Task` tool call:
 6. On confirm → write combined marker `<project>/.claude/.intent-and-routing-confirmed-<ISO>`. For standard tier: also write `<project>/docs/intents/<YYYY-MM-DD>-<id>-<slug>.md` to disk (NOT committed individually — bundles at slice close per Git policy). For trivial tier: no `docs/intents/` file; the intent is recorded as a one-line entry in the slice's session journal.
 7. Execute.
 
-The UserPromptSubmit hook clears markers and injects a routing classifier (~25 tokens) per turn. Subagents bypass via `agent_id`. Bypass: `BATUTA_INTENT_BYPASS=1` on the launching shell. Legacy markers `.intent-confirmed-*` and `.routing-confirmed-*` are honored for one release cycle and removed in v4.6. Full protocol in `rules/core/intent-capture-required.md` (also imported by opencode via `opencode.json`).
+The UserPromptSubmit hook clears markers and injects a routing classifier (~25 tokens) per turn. Subagents bypass via `agent_id`. Bypass: `BATUTA_INTENT_BYPASS=1` on the launching shell. Legacy markers `.intent-confirmed-*` and `.routing-confirmed-*` are honored for one release cycle and removed in v4.6. Full protocol in `rules/core/intent-capture-required.md`.
 
 ## Delegation
 

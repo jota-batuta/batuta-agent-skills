@@ -11,7 +11,7 @@ This file is the cross-tool entry point for AI coding agents working in this rep
 - A **sequential audit chain** (`test-engineer` → `code-reviewer` → `security-auditor`) with literal `AUDIT RESULT: APPROVED|BLOCKED` contract
 - A **project-wide doc graph** (`docs/PRD.md`, `docs/SPEC.md`, `docs/adr/`, `docs/plans/`, `docs/sessions/`)
 - **34 skills** (engineering lifecycle + Batuta-specific KB and authoring skills)
-- **OpenCode interop** (`.opencode/skills` symlink, `.opencode/agents/` and `.opencode/commands/` with frontmatter rewritten for opencode, `opencode.json` template, `.opencode/AGENTS.md.template` strict contract — see [`docs/opencode-setup.md`](docs/opencode-setup.md))
+- **Cross-tool portability** — doc graph (PRD/SPEC/ADRs/plans/sessions) is plain Markdown, ports to any tool; see [`docs/PORTABILITY.md`](docs/PORTABILITY.md)
 
 ## Rule #0 — delegation-only main agent (Claude Code-specific runtime)
 
@@ -52,7 +52,7 @@ Full spec: [`rules/core/intent-capture-required.md`](rules/core/intent-capture-r
 | Marker file `.intent-and-routing-confirmed-<ISO>` | **MUST write** — consumed by `pre-edit-intent-gate.sh` and `pre-task-routing-gate.sh` | **NEVER write** — no hook to consume; would create stale files |
 | `docs/intents/<id>.md` (standard tier only) | **MUST write** to disk; bundled commit at slice close | **MUST write** to disk; bundled commit at slice close |
 | `docs/intents/<id>.md` (trivial tier) | NEVER created — recorded in session journal at slice close | NEVER created — recorded in session journal at slice close |
-| Per-turn auto-injected reminder | YES — slim ~95-token reminder via UserPromptSubmit hook | NO — opencode loads `rules/core/intent-capture-required.md` once via `opencode.json` |
+| Per-turn auto-injected reminder | YES — slim ~95-token reminder via UserPromptSubmit hook | NO — tool loads `rules/core/intent-capture-required.md` once at session start |
 | `BATUTA_INTENT_BYPASS=1` env var | Honored by hooks | Not applicable (no enforcement to bypass) |
 
 ### Commit policy (tool-portable)
@@ -85,72 +85,6 @@ If you are running this repository in a tool other than Claude Code:
 5. **Self-enforce Rule #0** — do not edit source code; produce the same artifacts the agents would have produced (build-log, audit report) by hand. The doc graph survives the lack of runtime enforcement.
 
 Full handoff checklist: [`docs/PORTABILITY.md`](docs/PORTABILITY.md).
-
-## OpenCode Integration
-
-OpenCode uses a **skill-driven execution model** powered by the `skill` tool. This plugin ships a complete opencode interop layer at `.opencode/` validated end-to-end with DeepSeek V4 Pro via OpenRouter (see [`docs/opencode-setup.md`](docs/opencode-setup.md) for the bring-up notes and the IC-009/IC-010 sweep findings).
-
-### What ships for OpenCode consumers
-
-- `.opencode/skills` — symlink to the plugin's `skills/` directory (zero duplication; opencode reads SKILL.md descriptions on-demand).
-- `.opencode/agents/*.md` (9) — opencode-shaped frontmatter (`mode: subagent`, `permission`, OpenRouter model IDs).
-- `.opencode/commands/*.md` (13) — opencode-shaped frontmatter (`description`, `agent: build`).
-- `opencode.json` (root) — provider config: OpenRouter, model defaults, **reasoning disabled** for DeepSeek to avoid empty-content timeouts, `instructions` glob to `rules/`.
-- `.opencode/AGENTS.md.template` — the strict opencode contract (Class A/B/C action-vs-analysis, MUST/NEVER, anti-rationalizations, pre-tool-call checklist). Consumers copy to their project root as `AGENTS.md`.
-
-### Core rules (model behavior contract)
-
-- For each user message: skim `.opencode/skills/` descriptions; if any apply, invoke `skill({name})` and follow the skill's procedure exactly. NEVER skip a skill because the task seems trivial.
-- Distinguish Class A (action requests, MUST grill) vs Class B (analysis/lookup/audit, act directly) vs Class C (ambiguous, ask which mode). The full procedure lives in `.opencode/AGENTS.md.template`.
-
-### Intent → skill mapping
-
-- Feature / new functionality → `spec-driven-development`, then `incremental-implementation`, `test-driven-development`
-- Planning / breakdown → `planning-and-task-breakdown`
-- Bug / failure / unexpected behavior → `debugging-and-error-recovery`
-- Code review → `code-review-and-quality`
-- Refactoring / simplification → `code-simplification`
-- API or interface design → `api-and-interface-design`
-- UI work → `frontend-ui-engineering`
-- Security / vulnerability concern → `security-and-hardening`
-- Performance / latency → `performance-optimization`
-- Documentation / decision → `documentation-and-adrs`
-
-### Lifecycle Mapping (Implicit Commands)
-
-OpenCode does not support slash commands like `/spec` or `/plan`.
-
-Instead, the agent must internally follow this lifecycle:
-
-- DEFINE → `spec-driven-development`
-- PLAN → `planning-and-task-breakdown`
-- BUILD → `incremental-implementation` + `test-driven-development`
-- VERIFY → `debugging-and-error-recovery`
-- REVIEW → `code-review-and-quality`
-- SHIP → `shipping-and-launch`
-
-### Execution Model
-
-For every request:
-
-1. Determine if any skill applies (even 1% chance)
-2. Invoke the appropriate skill using the `skill` tool
-3. Follow the skill workflow strictly
-4. Only proceed to implementation after required steps (spec, plan, etc.) are complete
-
-### Anti-Rationalization
-
-The following thoughts are incorrect and must be ignored:
-
-- "This is too small for a skill"
-- "I can just quickly implement this"
-- "I’ll gather context first"
-
-Correct behavior:
-
-- Always check for and use skills first
-
-This ensures OpenCode behaves similarly to Claude Code with full workflow enforcement.
 
 ## Creating a New Skill
 
