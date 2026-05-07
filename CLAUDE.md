@@ -80,18 +80,8 @@ Exempt paths for Edit/Write (no marker required): `.claude/**`, `docs/**`, `**/C
 
 Rationale per version: v4.1 added the marker hook; v4.2 closed the per-turn and Bash gaps; v4.3 added auto-injection + intent persistence; v4.4 closed the routing-discretion gap with a parallel hook+marker pair; **v4.5 distills the stack** — slim reminder, single combined confirmation, trivial tier, deferred commit bundling — for ~505 tokens/turn savings, halved confirmation round-trips on standard work, one-line confirmations on trivial work, and 60-70% fewer slice-level commits, while preserving the v4.4 enforcement guarantees.
 
-### code-graph (auto + manual)
-**MUST trigger** on any of:
-- Operator asks about architecture, dependencies, coupling, broad-scope refactors.
-- Session start on a repo > 5k LOC with no cached index (`~/.cache/codebase-memory-mcp/`).
-- `code-reviewer` or `security-auditor` need a call map to audit the diff.
-
-Skill: [`skills/code-graph/`](skills/code-graph/SKILL.md). Slash manual: [`/code-graph`](.claude/commands/code-graph.md). Recipe: [`docs/usage/debugging-with-code-graph.md`](docs/usage/debugging-with-code-graph.md).
-**Single engine**: codebase-memory-mcp. The skill checks availability via `~/.claude/code-graph-engines.json` and dispatches MCP tool calls (`trace_call_path`, `search_graph`, `get_architecture`, `query_graph`, `get_code_snippet`).
-Bootstrap: [`tools/setup-code-graph.sh`](tools/setup-code-graph.sh) installs the engine. It is a separate operator-side step — `setup-rules.sh` does not chain into it.
-**NEVER** run `graphify claude install` (modifies `.claude/settings.json` → v2.7 kill-switch). graphify itself was deprecated in v4.0 (ADR-0013); the prohibition stays because the upstream command still exists. MCP registration goes through `claude mcp add --scope user` (writes to `~/.claude.json`, outside the kill-switch).
-
-Rationale: re-reading the repo for every architecture question burns tokens and produces worse answers than a persisted graph. codebase-memory-mcp covers 100% of code-only graph queries (call paths, callers, callees, cycles, blast radius), is stable on Windows, has organizational backing (DeusData), and is supply-chain hardened (release pin + SHA-256 + GH attestation). graphify was removed because of three blocking Windows issues ([#378](https://github.com/safishamsi/graphify/issues/378), [#244](https://github.com/safishamsi/graphify/issues/244), [#501](https://github.com/safishamsi/graphify/issues/501)) and bus factor 1.
+### code-graph (DEPRECATED in v4.1)
+Removed from MUST triggers. Step 0.5 was non-blocking in both audit agents; zero consumer adoption of the rule. Use `codebase-flow-mapper` for architecture diagrams and grep+read for call-site queries. See `skills/code-graph/SKILL.md` for history and migration guide.
 
 ### kb-pipeline (per-commit dispatch)
 **Auto-invoked** by `hooks/post-commit-kb.sh` when `.claude/kb-config.json` has `kb_pipeline_enabled: true`. The hook dispatches the agent in a detached background process via `nohup timeout 120 claude --print ... & disown` so the commit returns immediately. The agent runs three internal phases — Capture / Curate / Write — against the commit diff and writes to the vault (`<vault>/decisions/`, `gotchas/`, `playbooks/`) or `<vault>/_inbox/` for items that fail curation.
@@ -115,6 +105,14 @@ See `docs/DELEGATION-RULE.md` (native delegation + post-edit audit chain; kill-s
 ## Session-handoff protocol
 
 Long sessions with multiple phases drift the way today's session did unless the integrated plan and the in-flight state are persisted as repo artifacts, not in the conversation buffer. The convention below makes that persistence concrete.
+
+### Doc layers at a glance
+
+| Artifact | Captures | Written when | Committed when |
+|---|---|---|---|
+| `docs/intents/IC-NNN.md` | What you authorized (before exec) | On intent-capture confirmation | Bundled at slice close |
+| `docs/sessions/YYYY-MM-DD.md` | What happened + Next entry point | At `/kb-end-session` | Immediately by skill |
+| `docs/plans/active/slug.md` | How to execute across slices | Auto-saved on ExitPlanMode hook | During the slice |
 
 ### Active plan, archived plans
 

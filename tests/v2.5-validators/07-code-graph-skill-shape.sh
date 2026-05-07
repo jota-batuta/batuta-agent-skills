@@ -1,19 +1,16 @@
 #!/usr/bin/env bash
 # 07-code-graph-skill-shape.sh
-# Validates the code-graph integration. Updated for v4.0 single-engine
-# (codebase-memory-mcp); graphify was deprecated in ADR-0013.
-#   (a) SKILL.md frontmatter (name, description) and required sections present.
+# Validates the code-graph deprecation state introduced in v4.1.
+# (graphify deprecated ADR-0013 in v4.0; skill deprecated + Step 0.5 removed in v4.1.)
+#   (a) SKILL.md frontmatter (name, description, deprecated: true) and ## Replacements
+#       section present; codebase-flow-mapper listed as replacement.
 #   (b) SKILL.md does NOT contain `graphify claude install` as a positive instruction.
-#       It MAY appear inside Anti-Rationalizations / Red Flags / Process step text only
-#       as a prohibition. We allow occurrences only on lines that also mention
-#       'forbidden', 'never', 'do not', 'block', 'kill-switch', or 'red flag' (case-
-#       insensitive) — anywhere else is a positive use and fails.
-#   (c) SKILL.md documents engine selection (Step 0) and references codebase-memory-mcp.
-#   (d) The integrations rule exists and contains the mandatory Anti-patterns section.
+#   (c) SKILL.md references codebase-memory-mcp in historical context (## History).
+#   (d) The integrations rule exists, is marked deprecated, and retains Anti-patterns.
 #   (e) ADR-0007 exists (historical record of the dual-engine era).
 #   (f) Bootstrap scripts exist, are executable, and do NOT write to .claude/settings*.
 #   (g) Slash command exists with frontmatter description.
-# Contract introduced in v2.8; v4.0 removed graphify-positive assertions.
+# Contract introduced in v2.8; v4.0 removed graphify; v4.1 deprecated the skill.
 
 set -uo pipefail
 
@@ -35,18 +32,15 @@ ok()   { echo "  OK   $1"; }
 miss() { echo "  MISS $1"; failed=1; }
 drift(){ echo "  DRIFT $1"; failed=1; }
 
-# --- (a) SKILL.md frontmatter and sections ---
+# --- (a) SKILL.md frontmatter (deprecated state) and ## Replacements section ---
 if [[ ! -f "$SKILL" ]]; then
   miss "skills/code-graph/SKILL.md missing"
 else
-  grep -qE '^name: code-graph$'                "$SKILL" && ok "SKILL.md frontmatter name: code-graph" || miss "SKILL.md frontmatter name: code-graph"
-  grep -qE '^description: '                    "$SKILL" && ok "SKILL.md frontmatter description present"   || miss "SKILL.md frontmatter description present"
-  grep -qE '^## Overview$'                     "$SKILL" && ok "SKILL.md ## Overview"                       || miss "SKILL.md ## Overview"
-  grep -qE '^## When to Use$'                  "$SKILL" && ok "SKILL.md ## When to Use"                    || miss "SKILL.md ## When to Use"
-  grep -qE '^## Process$'                      "$SKILL" && ok "SKILL.md ## Process"                        || miss "SKILL.md ## Process"
-  grep -qE '^## Anti-Rationalizations$'        "$SKILL" && ok "SKILL.md ## Anti-Rationalizations"          || miss "SKILL.md ## Anti-Rationalizations"
-  grep -qE '^## Red Flags$'                    "$SKILL" && ok "SKILL.md ## Red Flags"                      || miss "SKILL.md ## Red Flags"
-  grep -qE '^## Verification$'                 "$SKILL" && ok "SKILL.md ## Verification"                   || miss "SKILL.md ## Verification"
+  grep -qE '^name: code-graph$'               "$SKILL" && ok "SKILL.md frontmatter name: code-graph"             || miss "SKILL.md frontmatter name: code-graph"
+  grep -qE '^description: '                   "$SKILL" && ok "SKILL.md frontmatter description present"          || miss "SKILL.md frontmatter description present"
+  grep -qE '^deprecated: true$'               "$SKILL" && ok "SKILL.md deprecated: true (v4.1)"                  || miss "SKILL.md must have deprecated: true in frontmatter (v4.1)"
+  grep -qE '^## Replacements$'                "$SKILL" && ok "SKILL.md ## Replacements section present"          || miss "SKILL.md ## Replacements section missing (required for deprecated skills)"
+  grep -qE 'codebase-flow-mapper'             "$SKILL" && ok "SKILL.md references codebase-flow-mapper as replacement" || miss "SKILL.md must reference codebase-flow-mapper as replacement"
 
   # --- (b) graphify claude install must only appear in negative/prohibitive context ---
   # Find every line mentioning 'graphify claude install' and assert each is on a line
@@ -61,25 +55,23 @@ else
     echo "$bad_lines" | sed 's/^/        /'
   fi
 
-  # --- (c) engine selection (Step 0) and engine reference documented ---
-  grep -qiE 'step 0.*engine selection|engine selection.*always first' "$SKILL" \
-    && ok "SKILL.md documents Step 0 engine selection" \
-    || miss "SKILL.md documents Step 0 engine selection"
+  # --- (c) codebase-memory-mcp must appear in historical context (## History) ---
   grep -qE 'codebase-memory(-mcp)?' "$SKILL" \
-    && ok "SKILL.md references the engine codebase-memory-mcp" \
-    || miss "SKILL.md references the engine codebase-memory-mcp"
+    && ok "SKILL.md references codebase-memory-mcp in history section" \
+    || miss "SKILL.md should reference codebase-memory-mcp for ADR traceability (## History)"
 fi
 
-# --- (d) integrations rule ---
+# --- (d) integrations rule (deprecated in v4.1, preserved for historical reference) ---
 if [[ ! -f "$RULE" ]]; then
   miss "rules/integrations/code-graph-usage.md missing"
 else
-  grep -qE '^title: '                  "$RULE" && ok "rule frontmatter title"          || miss "rule frontmatter title"
-  grep -qE '^applies-to: '             "$RULE" && ok "rule frontmatter applies-to"     || miss "rule frontmatter applies-to"
-  grep -qE '^last-reviewed: '          "$RULE" && ok "rule frontmatter last-reviewed"  || miss "rule frontmatter last-reviewed"
-  grep -qE '^## Inviolable rules$'     "$RULE" && ok "rule ## Inviolable rules"        || miss "rule ## Inviolable rules"
-  grep -qE '^## Anti-patterns$'        "$RULE" && ok "rule ## Anti-patterns"           || miss "rule ## Anti-patterns (mandatory per §A.4)"
-  # The rule must explicitly forbid graphify claude install (rule 4 in the file).
+  grep -qE '^title: '                  "$RULE" && ok "rule frontmatter title"                      || miss "rule frontmatter title"
+  grep -qE '^applies-to: '             "$RULE" && ok "rule frontmatter applies-to"                 || miss "rule frontmatter applies-to"
+  grep -qE '^last-reviewed: '          "$RULE" && ok "rule frontmatter last-reviewed"              || miss "rule frontmatter last-reviewed"
+  grep -qE '^deprecated: true$'        "$RULE" && ok "rule deprecated: true (v4.1)"                || miss "rule must have deprecated: true in frontmatter (v4.1)"
+  grep -qE '^## Inviolable rules$'     "$RULE" && ok "rule ## Inviolable rules (historical)"       || miss "rule ## Inviolable rules (preserved for history)"
+  grep -qE '^## Anti-patterns$'        "$RULE" && ok "rule ## Anti-patterns (historical)"          || miss "rule ## Anti-patterns (mandatory per §A.4, preserved for history)"
+  # The rule must explicitly forbid graphify claude install.
   grep -qE 'graphify claude install' "$RULE" \
     && ok "rule names 'graphify claude install' (as forbidden)" \
     || miss "rule must name 'graphify claude install' to make the prohibition searchable"
