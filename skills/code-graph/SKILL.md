@@ -1,22 +1,12 @@
 ---
 name: code-graph
-description: '[DEPRECATED v4.1] Maps code dependencies — use codebase-flow-mapper for architecture diagrams, grep+read for call-site queries'
+description: DEPRECATED in v4.1. Use codebase-flow-mapper for static architecture diagrams. Use grep+read for live call-site queries on repos under 10k LOC.
 deprecated: true
 deprecated_in: v4.1
 replaced_by: "codebase-flow-mapper (static diagrams), grep+read (live queries)"
 ---
 
 # Code Graph — Deprecated (v4.1)
-
-> **⚠️ DEPRECATED — v4.1**
->
-> This skill is no longer active. Do not invoke it.
->
-> **Replacements:**
-> - For architecture diagrams → use `codebase-flow-mapper`
-> - For call-site queries → use `grep` + `Read` directly
->
-> This file is preserved for historical reference only. Full history in git log.
 
 This skill was deprecated in v4.1. Investigation showed:
 
@@ -26,6 +16,7 @@ This skill was deprecated in v4.1. Investigation showed:
 - For repos under 10k LOC, `grep` + `read` is faster and uses fewer tokens.
 
 ## Replacements
+
 
 | Use case | Replacement |
 |---|---|
