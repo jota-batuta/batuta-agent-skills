@@ -24,4 +24,4 @@ For the **why** behind these recipes, see [`docs/PRD.md`](../PRD.md). For the **
 
 The plugin is **operator-side**. Almost everything you need is one or two `bash setup-*.sh` invocations. If a guide tells you to run a command, that command is idempotent and safe to re-run.
 
-If a guide refers to a feature you don't recognize, check the [`CHANGELOG.md`](../../CHANGELOG.md) for the version that introduced it. If the feature is in `main` but not in your interactive session, the [`upgrading.md`](upgrading.md) guide explains the cache-staleness pattern.
+If a feature is in `main` but not in your interactive session, the [`upgrading.md`](upgrading.md) guide explains the cache-staleness pattern.

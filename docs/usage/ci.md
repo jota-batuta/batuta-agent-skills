@@ -149,7 +149,7 @@ The plugin's own CI uses none of these — full coverage on every PR is acceptab
 
 ## Updating the pinned SHAs
 
-The plugin pins its third-party actions and the Claude CLI for supply-chain hardening (see [v3.4 in CHANGELOG](../../CHANGELOG.md)). Quarterly, or on a security advisory, refresh:
+The plugin pins its third-party actions and the Claude CLI for supply-chain hardening. Quarterly, or on a security advisory, refresh:
 
 ```bash
 gh api repos/actions/checkout/git/refs/tags/v6 --jq .object.sha       # actions/checkout
