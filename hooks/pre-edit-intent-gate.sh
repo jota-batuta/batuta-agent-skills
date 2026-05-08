@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
-# pre-edit-intent-gate.sh (v4.5)
+# pre-edit-intent-gate.sh (v4.6)
 # PreToolUse hook — enforces `rules/core/intent-capture-required.md`.
 # Blocks Write/Edit/MultiEdit AND Bash on implementation paths when no
 # intent-confirmed marker exists in the project's .claude/ directory.
+#
+# v4.6 changes (vs v4.5):
+#   - Read-only Bash fast-path: simple ls/cat/grep/git-status etc. now bypass
+#     the marker check. Conservative regex; pipes allowed only between
+#     read-only verbs; any of >, ;, &, $, backtick falls through.
 #
 # v4.5 marker contract — accepts EITHER:
 #   - `<project-root>/.claude/.intent-and-routing-confirmed-<ISO>`  (new combined marker)
@@ -69,6 +74,31 @@ if [[ "$tool_name" == "Bash" ]]; then
     mkdir -p "$project_root/.claude" 2>/dev/null
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS intent-gate(Bash) cwd=$PWD" >> "$project_root/.claude/kb-debug.log" 2>/dev/null
     exit 0
+  fi
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Read-only fast-path. Allow simple invocations and pipes of known read-only
+  # verbs without a marker. Conservative: any of >, ;, &, $(...), backtick →
+  # fall through to marker check.
+  # ──────────────────────────────────────────────────────────────────────────
+  cmd=$(echo "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)
+  if [[ -n "$cmd" && ! "$cmd" =~ [\>\;\&\`\$] ]]; then
+    ro_verbs='(ls|eza|tree|stat|file|pwd|which|whoami|id|cat|head|tail|bat|wc|nl|cut|sort|uniq|tr|grep|rg|ripgrep|find|fd|ag|jq|yq|diff|cmp|ps|pgrep|env|echo|printf|date|uname|hostname|dig|nslookup|host|test|true|false|column|xargs|basename|dirname|realpath|readlink|tee)'
+    git_ro='git[[:space:]]+(status|diff|log|show|branch|blame|rev-parse|ls-files|remote|config|describe|reflog|tag|fetch|cat-file|grep)'
+    gh_ro='gh[[:space:]]+(pr|issue|run|workflow|repo|api)[[:space:]]+'
+    segment_re="^[[:space:]]*(${ro_verbs}|${git_ro}|${gh_ro})([[:space:]]|$)"
+
+    allow_fast=true
+    IFS='|' read -ra _segments <<< "$cmd"
+    for _seg in "${_segments[@]}"; do
+      if ! [[ "$_seg" =~ $segment_re ]]; then
+        allow_fast=false
+        break
+      fi
+    done
+    if [[ "$allow_fast" == "true" ]]; then
+      exit 0
+    fi
   fi
 
   marker_dir="$project_root/.claude"
