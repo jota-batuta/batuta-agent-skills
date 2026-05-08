@@ -10,6 +10,7 @@ Read-only Bash fast-path on `pre-edit-intent-gate.sh`. The v4.2 "gate-all-Bash, 
 - **Edit/Write branch unchanged.** The fast-path is Bash-only. Implementation files still require an intent marker.
 - **Subagent bypass and `BATUTA_INTENT_BYPASS=1` unchanged.** Both still short-circuit before the fast-path block.
 - **Plugin version 4.6.0 → 4.7.0.**
+- **Intent gate stays `exit 1` (non-blocking warning), not `exit 2` (hard block).** A blanket bump from exit 1 to exit 2 (commit `dfa158f` on origin/main) would reinstall the very friction the read-only fast-path was meant to remove on every non-fast-path Bash. The operator's policy: behavior discipline (writing the `.intent-pending-<ISO>` marker in the same response as the intent JSON, per Step 5 of the v4.6 Intent capture protocol) is the primary mechanism; the hook is a backstop. The other gate hooks (`delegation-guard`, `pr-merge-guard`, `pre-pr-create-guard`, `pre-session-context-gate`) keep `exit 2` — those guard against destructive operations where hard block is the right policy.
 
 Local validation evidence: with the patch applied to `~/.claude/plugins/cache/.../hooks/pre-edit-intent-gate.sh`, `find . -maxdepth 2 -name ".intent-*"` and similar exploratory commands now pass without an intent marker, while non-trivial commands (e.g. anything containing `&&` or a heredoc) continue to require the marker as designed.
 

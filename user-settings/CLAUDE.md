@@ -59,6 +59,8 @@ Before any `Edit`/`Write`/`Bash`/`Task` tool call:
 
 The UserPromptSubmit hook promotes pending→confirmed markers (two-phase, v4.6) and injects a routing classifier (~25 tokens) per turn. The gate checks for hook-written `.intent-and-routing-confirmed-*` markers — the model MUST NOT write confirmed markers directly (`delegation-guard.sh` blocks this). **The pending marker MUST be written in the same response as Step 4 (presenting intent), not after receiving the operator's "dale".** Subagents bypass via `agent_id`. Bypass: `BATUTA_INTENT_BYPASS=1` on the launching shell. Legacy markers `.intent-confirmed-*` and `.routing-confirmed-*` are honored for one release cycle. Full protocol in `rules/core/intent-capture-required.md` (also imported by opencode via `opencode.json`).
 
+**Self-correction when you forget Step 5.** `pre-edit-intent-gate.sh` returns `exit 1` (non-blocking warning) on miss — when you see "RULE violated (intent-capture gate)" in stderr, the action tool call may have executed despite the gate violation. STOP anyway. The warning means you skipped Step 4–5 above. Do not paper over it because the command appeared to succeed. Apologize, retroactively present the JSON intent, write the `.intent-pending-<ISO>` marker, and wait for explicit operator confirmation before the next action tool call. Improvising around the gate because it didn't hard-block is the exact failure mode this rule prevents — discipline is the primary mechanism, the hook is a backstop only.
+
 ## Delegation
 
 Delegation is the default for implementation; main retains orchestration.

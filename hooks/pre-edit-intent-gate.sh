@@ -133,7 +133,7 @@ To bypass for legitimate quick fixes, restart Claude Code with:
 
 Rule: rules/core/intent-capture-required.md
 EOF
-  exit 2
+  exit 1
 fi
 
 # ============================================================================
@@ -230,4 +230,4 @@ To bypass for legitimate quick fixes, restart Claude Code with:
 
 Rule: rules/core/intent-capture-required.md
 EOF
-exit 2
+exit 1
