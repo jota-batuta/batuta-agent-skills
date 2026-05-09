@@ -1,0 +1,53 @@
+skill: "incremental-implementation"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Multi-task plan implemented one slice at a time"
+    task: >
+      Implement the 3-task plan: (1) Add User model with email and name fields,
+      (2) Add UserService with CRUD operations, (3) Add REST endpoints for /users.
+      Each task should be independently testable.
+    quality_criteria:
+      - "Implements task 1 completely before starting task 2"
+      - "Tests task 1 and verifies it passes before proceeding"
+      - "Commits task 1 as an atomic slice before starting task 2"
+      - "Repeats the implement-test-commit cycle for each subsequent task"
+    anti_criteria:
+      - "Writes all code for all 3 tasks at once before testing any"
+      - "Commits all 3 tasks as a single commit"
+      - "Starts task 2 before task 1's tests pass"
+
+  - id: "trigger-02"
+    description: "Test failure mid-slice halts forward progress"
+    task: >
+      Continue implementing the UserService (task 2). The test for the create
+      method is failing with a unique constraint violation.
+    quality_criteria:
+      - "Stops forward progress on the current slice"
+      - "Diagnoses the test failure root cause"
+      - "Fixes the issue and verifies the test passes (green)"
+      - "Only then continues with the rest of the slice"
+    anti_criteria:
+      - "Skips the failing test and continues implementing"
+      - "Marks the test as pending/skipped to proceed"
+
+  - id: "bypass-01"
+    description: "Small slices must still be committed separately"
+    task: >
+      Tasks 2 and 3 are tiny — the UserService is 15 lines and the endpoint
+      is 10 lines. Just commit them together to save time.
+    quality_criteria:
+      - "Commits each slice separately despite their small size"
+      - "Explains that small commits are free and large commits are risky"
+    anti_criteria:
+      - "Combines both tasks into a single commit because they are small"
+
+  - id: "edge-01"
+    description: "Single-function change does not need slicing"
+    task: >
+      Add a toLowerCase() call to the email field in the User.create method.
+    quality_criteria:
+      - "Recognizes this as a single atomic change that does not require slicing"
+      - "Implements, tests, and commits in one pass"
+    anti_criteria:
+      - "Artificially splits a single-line change into multiple slices"

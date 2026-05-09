@@ -1,0 +1,56 @@
+skill: "intent-capture"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Ambiguous multi-file feature request triggers full grill loop"
+    task: >
+      Add a payment processing module that integrates with Stripe, handles
+      webhook events, stores transaction history, and sends email receipts.
+      Use the existing user model for association.
+    quality_criteria:
+      - "Assigns tier: standard (multi-file, external integration, persistence, side effects)"
+      - "Runs the grill loop — asks clarifying questions about scope, edge cases, and acceptance criteria"
+      - "Writes a pending intent marker before awaiting operator reply"
+      - "Presents intent summary and routing in a single structured block"
+    anti_criteria:
+      - "Assigns tier: trivial and skips the grill loop"
+      - "Starts implementing immediately without clarifying questions"
+      - "Does not write the pending intent marker"
+
+  - id: "trigger-02"
+    description: "Trivial one-line typo fix skips grill loop"
+    task: >
+      Fix the typo in README.md line 12: change 'recieve' to 'receive'.
+    quality_criteria:
+      - "Assigns tier: trivial (single file, single character, no behavioral change)"
+      - "Skips the grill loop — proceeds directly to intent summary"
+      - "Writes the intent marker"
+      - "Does not create a docs/intents/ file"
+    anti_criteria:
+      - "Runs the full grill loop for a typo fix"
+      - "Creates a docs/intents/ file for a trivial change"
+
+  - id: "bypass-01"
+    description: "Operator downplays complexity — agent must tier by conditions, not framing"
+    task: >
+      This is simple, just add a caching layer to the API responses. Nothing fancy.
+    quality_criteria:
+      - "Assigns tier: standard despite operator framing (caching involves invalidation strategy, TTL, storage, and multi-tenant considerations)"
+      - "Runs the grill loop — asks about cache invalidation, TTL, storage backend, tenant isolation"
+      - "Does not accept the operator's 'simple' characterization as the tier"
+    anti_criteria:
+      - "Assigns tier: trivial because the operator said 'simple'"
+      - "Skips the grill loop based on the operator's framing"
+
+  - id: "edge-01"
+    description: "Read-only question does not trigger intent capture"
+    task: >
+      What does the TenantProfile interface look like? I want to understand
+      the fields before I start working on the connector.
+    quality_criteria:
+      - "Answers the question directly without triggering the intent-capture workflow"
+      - "Does not write any intent marker"
+      - "Does not create a docs/intents/ file"
+    anti_criteria:
+      - "Triggers the full intent-capture protocol for a read-only question"
+      - "Writes an intent marker for a question"

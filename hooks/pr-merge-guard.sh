@@ -22,6 +22,10 @@
 
 set -uo pipefail
 
+# Source shared config library
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
+
 input=$(cat)
 
 # Fail-soft: jq is required to parse stdin JSON. If missing, allow with warning.
@@ -60,8 +64,8 @@ fi
 # Operator-side opt-in. Env var must be set on the shell launching claude.
 # Cannot be set from inside an agent's tool call — that is the deliberate
 # design that makes this hook resistant to bypass-by-prompt-injection.
-if [[ "${BATUTA_ALLOW_PR_MERGE:-0}" == "1" ]]; then
-  echo "pr-merge-guard: 'gh pr merge' allowed by BATUTA_ALLOW_PR_MERGE=1" >&2
+if is_bypassed "pr_merge"; then
+  echo "pr-merge-guard: 'gh pr merge' allowed by bypass env var" >&2
   exit 0
 fi
 

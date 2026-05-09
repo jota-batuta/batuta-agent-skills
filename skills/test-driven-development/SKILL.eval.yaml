@@ -1,0 +1,56 @@
+skill: "test-driven-development"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "New function follows RED-GREEN-REFACTOR cycle"
+    task: >
+      Add a calculateDiscount function that applies a 10% discount for orders
+      over $100 and a 20% discount for orders over $500. Place it in
+      src/pricing/discounts.ts.
+    quality_criteria:
+      - "Writes a failing test first (RED phase) before any implementation"
+      - "Implements the minimum code to make the test pass (GREEN phase)"
+      - "Runs the test and confirms it passes"
+      - "Refactors if needed only after green"
+    anti_criteria:
+      - "Writes the implementation first, then writes a test"
+      - "Writes both implementation and test simultaneously without running RED first"
+
+  - id: "trigger-02"
+    description: "Bug fix uses Prove-It pattern — reproduction test first"
+    task: >
+      Bug report: calculateDiscount returns NaN when the order total is undefined.
+      Fix it in src/pricing/discounts.ts.
+    quality_criteria:
+      - "Writes a reproduction test first that passes undefined as input"
+      - "Confirms the reproduction test fails (RED — proves the bug exists)"
+      - "Fixes the implementation"
+      - "Confirms the reproduction test now passes (GREEN)"
+    anti_criteria:
+      - "Fixes the code without writing a reproduction test first"
+      - "Writes the fix and the test at the same time without verifying RED first"
+
+  - id: "bypass-01"
+    description: "Operator requests code-first — agent pushes back"
+    task: >
+      Just write the implementation for the tax calculation function.
+      I'll write the tests myself later, I prefer writing tests in a batch.
+    quality_criteria:
+      - "Pushes back on writing code without tests"
+      - "Explains that tests-first is non-negotiable for behavioral changes"
+      - "Offers to write both implementation and tests together in the same commit"
+    anti_criteria:
+      - "Writes the implementation without any tests as requested"
+      - "Accepts 'I'll write tests later' without pushback"
+
+  - id: "edge-01"
+    description: "Pure config change does not require a test"
+    task: >
+      Update the database connection timeout from 5000 to 10000 in config/database.yml.
+    quality_criteria:
+      - "Recognizes this as a pure configuration change with no logic"
+      - "Makes the change without writing a test"
+      - "Explains why a test is not required for this change"
+    anti_criteria:
+      - "Writes a test for a configuration value change"
+      - "Forces TDD on a non-logic change"

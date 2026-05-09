@@ -10,8 +10,8 @@
 #     read-only verbs; any of >, ;, &, $, backtick falls through.
 #
 # v4.5 marker contract — accepts EITHER:
-#   - `<project-root>/.claude/.intent-and-routing-confirmed-<ISO>`  (new combined marker)
-#   - `<project-root>/.claude/.intent-confirmed-<ISO>`              (legacy v4.2-v4.4)
+#   - `<project-root>/.claude/<intent_confirmed>-<ISO>`  (new combined marker)
+#   - `<project-root>/.claude/<intent_legacy>-<ISO>`     (legacy v4.2-v4.4)
 # Legacy markers are honored for one release cycle to avoid breaking in-flight
 # work; they will be removed in v4.6.
 #
@@ -25,12 +25,11 @@
 # and deleted by `clear-intent-marker.sh` at the next UserPromptSubmit.
 #
 # Exempt paths for Edit/Write (no marker required):
-#   .claude/**, docs/**, **/CLAUDE.md, **/MEMORY.md, memory/**, .gitignore,
-#   README.md, LICENSE*, plugin.json, ATTRIBUTION.md, CHANGELOG.md
+#   Configured in plugin-config.json → exempt_paths[]
 #
 # Bash has NO exempt list — every Bash tool call is gated.
 #
-# Bypass: BATUTA_INTENT_BYPASS=1 (operator-side env var).
+# Bypass: env var configured in plugin-config.json → bypass_env_vars.intent
 #
 # Output protocol:
 #   exit 0 → allow
@@ -40,6 +39,9 @@
 
 set -uo pipefail
 
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
+
 input=$(cat)
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -48,9 +50,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # Subagent bypass: subagents inherit confirmed intent from the main agent.
-event_name=$(echo "$input" | jq -r '.hook_event_name // empty' 2>/dev/null)
-agent_id=$(echo "$input" | jq -r '.agent_id // empty' 2>/dev/null)
-if [[ "$event_name" == "PreToolUse" && -n "$agent_id" ]]; then
+if is_subagent "$input"; then
   exit 0
 fi
 
@@ -60,61 +60,40 @@ tool_name=$(echo "$input" | jq -r '.tool_name // empty' 2>/dev/null)
 # Bash branch — all Bash tool calls gated.
 # ============================================================================
 if [[ "$tool_name" == "Bash" ]]; then
-  # Resolve project root: $CLAUDE_PROJECT_DIR → cwd via git → none.
-  project_root="${CLAUDE_PROJECT_DIR:-}"
-  if [[ -z "$project_root" ]]; then
-    project_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
-  fi
+  # Resolve project root via lib.sh.
+  project_root=$(resolve_project_root)
 
   if [[ -z "$project_root" ]]; then
     exit 0  # cannot resolve — fail-soft allow
   fi
 
-  if [[ "${BATUTA_INTENT_BYPASS:-0}" == "1" ]]; then
+  if is_bypassed "intent"; then
     mkdir -p "$project_root/.claude" 2>/dev/null
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS intent-gate(Bash) cwd=$PWD" >> "$project_root/.claude/kb-debug.log" 2>/dev/null
+    _log "BYPASS intent-gate(Bash) cwd=$PWD"
     exit 0
   fi
 
   # ──────────────────────────────────────────────────────────────────────────
-  # Read-only fast-path. Allow simple invocations and pipes of known read-only
-  # verbs without a marker. Conservative: any of >, ;, &, $(...), backtick →
-  # fall through to marker check.
+  # Read-only fast-path via lib.sh. Allow simple invocations and pipes of
+  # known read-only verbs without a marker.
   # ──────────────────────────────────────────────────────────────────────────
   cmd=$(echo "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)
-  if [[ -n "$cmd" && ! "$cmd" =~ [\>\;\&\`\$] ]]; then
-    ro_verbs='(ls|eza|tree|stat|file|pwd|which|whoami|id|cat|head|tail|bat|wc|nl|cut|sort|uniq|tr|grep|rg|ripgrep|find|fd|ag|jq|yq|diff|cmp|ps|pgrep|env|echo|printf|date|uname|hostname|dig|nslookup|host|test|true|false|column|xargs|basename|dirname|realpath|readlink|tee)'
-    git_ro='git[[:space:]]+(status|diff|log|show|branch|blame|rev-parse|ls-files|remote|config|describe|reflog|tag|fetch|cat-file|grep)'
-    gh_ro='gh[[:space:]]+(pr|issue|run|workflow|repo|api)[[:space:]]+'
-    segment_re="^[[:space:]]*(${ro_verbs}|${git_ro}|${gh_ro})([[:space:]]|$)"
-
-    allow_fast=true
-    IFS='|' read -ra _segments <<< "$cmd"
-    for _seg in "${_segments[@]}"; do
-      if ! [[ "$_seg" =~ $segment_re ]]; then
-        allow_fast=false
-        break
-      fi
-    done
-    if [[ "$allow_fast" == "true" ]]; then
-      exit 0
-    fi
+  if [[ -n "$cmd" ]] && is_readonly_bash "$cmd"; then
+    exit 0
   fi
 
   marker_dir="$project_root/.claude"
-  fresh_marker=""
   if [[ -d "$marker_dir" ]]; then
-    fresh_marker=$(find "$marker_dir" -maxdepth 1 -not -empty \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
-  fi
-
-  if [[ -n "$fresh_marker" ]]; then
-    exit 0
+    if find_any_marker "$marker_dir" "intent_confirmed" || \
+       find_any_marker "$marker_dir" "intent_legacy"; then
+      exit 0
+    fi
   fi
 
   cat >&2 <<EOF
 RULE violated (intent-capture gate, v4.5): cannot execute Bash without a confirmed intent.
 
-No marker found at $marker_dir/.intent-and-routing-confirmed-* (or legacy .intent-confirmed-*) — the gate applies to non-fast-path Bash tool calls; simple read-only commands are allowed by the conservative fast-path.
+No marker found at $marker_dir/$(marker_name "intent_confirmed")* (or legacy $(marker_name "intent_legacy")*) — the gate applies to non-fast-path Bash tool calls; simple read-only commands are allowed by the conservative fast-path.
 
 Required workflow before any Bash tool call:
 
@@ -129,7 +108,7 @@ clears it). There is NO time window — the boundary is the operator turn.
 
 To bypass for legitimate quick fixes, restart Claude Code with:
 
-  BATUTA_INTENT_BYPASS=1 claude
+  $(cfg ".bypass_env_vars.intent")=1 claude
 
 Rule: rules/core/intent-capture-required.md
 EOF
@@ -146,42 +125,18 @@ fi
 
 file_path="${file_path//\\//}"
 
-case "$file_path" in
-  ../*|*/..|*/../*|..)
-    echo "pre-edit-intent-gate.sh: path contains '..' as a segment. Refusing." >&2
-    exit 2
-    ;;
-esac
+if has_path_traversal "$file_path"; then
+  echo "pre-edit-intent-gate.sh: path contains '..' as a segment. Refusing." >&2
+  exit 2
+fi
 
-# EXEMPT PATHS — orchestration artifacts, no marker required
-case "$file_path" in
-  */.claude/*|.claude/*)           exit 0 ;;
-  */docs/*|docs/*)                 exit 0 ;;
-  */CLAUDE.md|CLAUDE.md)           exit 0 ;;
-  */MEMORY.md|MEMORY.md)           exit 0 ;;
-  */memory/*|memory/*)             exit 0 ;;
-  */.gitignore|.gitignore)         exit 0 ;;
-  */README.md|README.md)           exit 0 ;;
-  */LICENSE*|LICENSE*)              exit 0 ;;
-  */plugin.json|plugin.json)       exit 0 ;;
-  */ATTRIBUTION.md|ATTRIBUTION.md) exit 0 ;;
-  */CHANGELOG.md|CHANGELOG.md)     exit 0 ;;
-esac
+# EXEMPT PATHS — orchestration artifacts, no marker required (from config)
+if is_exempt_path "$file_path"; then
+  exit 0
+fi
 
-# Resolve project root: walk up from file_path looking for .git/
-project_root=""
-search_dir="$(dirname "$file_path")"
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-  if [[ -d "$search_dir/.git" ]]; then
-    project_root="$search_dir"
-    break
-  fi
-  parent="$(dirname "$search_dir")"
-  if [[ "$parent" == "$search_dir" ]]; then
-    break
-  fi
-  search_dir="$parent"
-done
+# Resolve project root via lib.sh (walk up from file_path's directory).
+project_root=$(resolve_project_root "$(dirname "$file_path")")
 
 if [[ -z "$project_root" ]]; then
   project_root=$(git -C "$(dirname "$file_path")" rev-parse --show-toplevel 2>/dev/null || echo "")
@@ -191,28 +146,26 @@ if [[ -z "$project_root" ]]; then
   exit 0
 fi
 
-if [[ "${BATUTA_INTENT_BYPASS:-0}" == "1" ]]; then
-  echo "pre-edit-intent-gate.sh: BATUTA_INTENT_BYPASS=1 — allowing edit of $file_path" >&2
+if is_bypassed "intent"; then
+  echo "pre-edit-intent-gate.sh: $(cfg ".bypass_env_vars.intent")=1 — allowing edit of $file_path" >&2
   mkdir -p "$project_root/.claude" 2>/dev/null
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS intent-gate(Edit) file=$file_path" >> "$project_root/.claude/kb-debug.log" 2>/dev/null
+  _log "BYPASS intent-gate(Edit) file=$file_path"
   exit 0
 fi
 
 marker_dir="$project_root/.claude"
-fresh_marker=""
 if [[ -d "$marker_dir" ]]; then
-  fresh_marker=$(find "$marker_dir" -maxdepth 1 -not -empty \( -name '.intent-and-routing-confirmed-*' -o -name '.intent-confirmed-*' \) -print -quit 2>/dev/null)
-fi
-
-if [[ -n "$fresh_marker" ]]; then
-  exit 0
+  if find_any_marker "$marker_dir" "intent_confirmed" || \
+     find_any_marker "$marker_dir" "intent_legacy"; then
+    exit 0
+  fi
 fi
 
 cat >&2 <<EOF
 RULE violated (intent-capture gate, v4.5): cannot edit implementation file:
   $file_path
 
-No marker found at $marker_dir/.intent-and-routing-confirmed-* (or legacy .intent-confirmed-*) — markers are invalidated at the start of each operator turn (UserPromptSubmit hook).
+No marker found at $marker_dir/$(marker_name "intent_confirmed")* (or legacy $(marker_name "intent_legacy")*) — markers are invalidated at the start of each operator turn (UserPromptSubmit hook).
 
 Required workflow before editing implementation files:
 
@@ -226,7 +179,7 @@ The marker is invalidated automatically at the next operator turn — no time wi
 
 To bypass for legitimate quick fixes, restart Claude Code with:
 
-  BATUTA_INTENT_BYPASS=1 claude
+  $(cfg ".bypass_env_vars.intent")=1 claude
 
 Rule: rules/core/intent-capture-required.md
 EOF

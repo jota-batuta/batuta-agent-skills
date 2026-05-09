@@ -3,7 +3,7 @@
 # Validates the v3.6 pr-merge-guard hook:
 #   (a) hooks/pr-merge-guard.sh exists, is executable, has the kill-switch shebang
 #   (b) the hook detects 'gh pr merge' with regex (whitespace-tolerant)
-#   (c) the hook respects BATUTA_ALLOW_PR_MERGE=1 env var (operator-side opt-in)
+#   (c) the hook uses is_bypassed "pr_merge" from lib.sh (operator-side opt-in)
 #   (d) the hook fails open on missing jq (does not lock the session)
 #   (e) the hook is registered in hooks/hooks.json with matcher 'Bash'
 #   (f) the block message references the env var for the operator to discover
@@ -39,15 +39,28 @@ else
     && ok "pr-merge-guard.sh has whitespace-tolerant 'gh pr merge' regex" \
     || miss "pr-merge-guard.sh must match 'gh\\s+pr\\s+merge' (whitespace-tolerant)"
 
-  # --- (c) operator-side opt-in via BATUTA_ALLOW_PR_MERGE env var ---
-  grep -qE 'BATUTA_ALLOW_PR_MERGE' "$HOOK" \
-    && ok "pr-merge-guard.sh references BATUTA_ALLOW_PR_MERGE env var" \
-    || miss "pr-merge-guard.sh must support BATUTA_ALLOW_PR_MERGE=1 override"
-  # The override path must allow (exit 0), not block.
-  if grep -B1 -A4 'BATUTA_ALLOW_PR_MERGE' "$HOOK" | grep -qE 'exit 0'; then
-    ok "BATUTA_ALLOW_PR_MERGE=1 path correctly allows (exit 0)"
+  # --- (c) operator-side opt-in via is_bypassed from lib.sh ---
+  # The hook sources lib.sh and calls is_bypassed "pr_merge" instead of
+  # checking the env var directly. The bypass env var is configured in
+  # plugin-config.json → bypass_env_vars.pr_merge.
+  grep -qE 'source.*lib\.sh' "$HOOK" \
+    && ok "pr-merge-guard.sh sources lib.sh" \
+    || miss "pr-merge-guard.sh must source lib.sh"
+  grep -qE 'is_bypassed.*pr_merge' "$HOOK" \
+    && ok "pr-merge-guard.sh calls is_bypassed \"pr_merge\"" \
+    || miss "pr-merge-guard.sh must call is_bypassed \"pr_merge\""
+  # The bypass path must allow (exit 0), not block.
+  if grep -B1 -A4 'is_bypassed' "$HOOK" | grep -qE 'exit 0'; then
+    ok "is_bypassed path correctly allows (exit 0)"
   else
-    miss "BATUTA_ALLOW_PR_MERGE=1 path must exit 0 (allow)"
+    miss "is_bypassed path must exit 0 (allow)"
+  fi
+  # Verify plugin-config.json has the bypass env var configured
+  CONFIG="${REPO_ROOT}/hooks/plugin-config.json"
+  if [[ -f "$CONFIG" ]] && grep -qE '"pr_merge".*BATUTA_ALLOW_PR_MERGE' "$CONFIG"; then
+    ok "plugin-config.json has pr_merge bypass env var configured"
+  else
+    miss "plugin-config.json must configure bypass_env_vars.pr_merge = BATUTA_ALLOW_PR_MERGE"
   fi
 
   # --- (d) fail-soft on missing jq ---
@@ -58,9 +71,9 @@ else
   fi
 
   # --- (f) block message must teach the operator the override mechanism ---
-  grep -qE 'BATUTA_ALLOW_PR_MERGE=1 claude|export BATUTA_ALLOW_PR_MERGE' "$HOOK" \
-    && ok "block message instructs the operator on the env-var override" \
-    || miss "block message must show the operator how to override (e.g. 'BATUTA_ALLOW_PR_MERGE=1 claude')"
+  grep -qE 'BATUTA_ALLOW_PR_MERGE' "$HOOK" \
+    && ok "block message references BATUTA_ALLOW_PR_MERGE env var" \
+    || miss "block message must reference BATUTA_ALLOW_PR_MERGE for operator discovery"
 
   # The block path must exit 2. The heredoc starting with 'RULE violated:' runs
   # ~21 lines through the closing 'EOF', then the next line is 'exit 2'. We use

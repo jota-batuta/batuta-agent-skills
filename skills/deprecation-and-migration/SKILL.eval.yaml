@@ -1,0 +1,74 @@
+skill: "deprecation-and-migration"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Deprecating a feature follows the 5 Questions and Churn Rule"
+    task: >
+      We want to deprecate the legacy v1 REST API. The v2 API has been
+      available for 8 months. There are still 3 internal services and
+      2 external partners consuming v1.
+    quality_criteria:
+      - "Asks or answers all 5 Questions Before Deprecating (usage, consumers, replacement, migration cost, maintenance cost)"
+      - "Quantifies the migration scope (3 internal, 2 external consumers)"
+      - "Applies the Churn Rule — provides a migration plan, not just a removal date"
+      - "Recommends advisory or compulsory deprecation with justification"
+      - "Includes migration tooling, documentation, or automated codemods"
+    anti_criteria:
+      - "Recommends deleting the v1 API without answering the 5 Questions"
+      - "Sets a removal date without providing migration tooling or support"
+      - "Ignores the external partners' migration burden"
+
+  - id: "trigger-02"
+    description: "Zombie code is identified and escalated to own-or-deprecate decision"
+    task: >
+      There is a utils/legacy-parser module that has not been touched in
+      9 months. No one is listed in CODEOWNERS. The CI tests for it are
+      failing but no one is fixing them. Several services still import it.
+    quality_criteria:
+      - "Identifies this as zombie code (no recent commits, no owner, failing tests, active consumers)"
+      - "Escalates to the own-or-deprecate decision — either assign an owner and invest, or deprecate with a migration plan"
+      - "Does not leave the code in limbo"
+    anti_criteria:
+      - "Ignores the zombie code signs and treats it as normal"
+      - "Recommends deleting it without checking for active consumers"
+
+  - id: "bypass-01"
+    description: "Just delete it without migration plan is blocked"
+    task: >
+      Just delete the old payment gateway integration. We have the new one
+      working. No need for a migration plan — anyone still using the old
+      one can figure it out.
+    quality_criteria:
+      - "Blocks the deletion without a migration plan"
+      - "Applies the Churn Rule — if you own the infrastructure, you are responsible for migrating your users"
+      - "Insists on verifying consumer count, providing migration documentation, and setting a timeline"
+    anti_criteria:
+      - "Deletes the integration without checking who depends on it"
+      - "Accepts 'they can figure it out' as a migration strategy"
+
+  - id: "edge-01"
+    description: "Dead code with zero consumers can be removed without migration"
+    task: >
+      Remove the utils/experimental-formatter module. Git log shows no
+      commits in 14 months, grep across the entire codebase shows zero
+      imports, and it is not listed in any package.json dependencies.
+    quality_criteria:
+      - "Verifies zero consumers via grep/dependency analysis"
+      - "Recognizes that dead code with no consumers does not require a migration plan"
+      - "Removes the code cleanly without imposing the full deprecation ceremony"
+    anti_criteria:
+      - "Forces the full 5 Questions and migration plan for code with zero consumers"
+      - "Refuses to delete dead code out of excessive caution"
+
+  - id: "edge-02"
+    description: "Deprecation without a replacement is blocked"
+    task: >
+      Deprecate the notification-service. We do not have a replacement yet
+      but the code is hard to maintain and we want to stop investing in it.
+    quality_criteria:
+      - "Blocks deprecation — Question 3 requires a replacement to exist before deprecating"
+      - "Explains that users cannot be told to stop using something with no alternative"
+      - "Suggests either building the replacement first or accepting the maintenance cost"
+    anti_criteria:
+      - "Deprecates the service without a replacement"
+      - "Skips Question 3 (Does a replacement exist?)"

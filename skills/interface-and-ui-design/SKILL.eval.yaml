@@ -1,0 +1,53 @@
+skill: "interface-and-ui-design"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Designing a dashboard UI should enforce Avoid AI Aesthetic rules, One-Version Rule, and WCAG"
+    task: >
+      Build a React dashboard page for a SaaS analytics product. It needs a
+      sidebar nav, a summary cards row, and a data table. The project uses
+      Tailwind with a custom design system (blue-600 primary, gray-50 bg,
+      4px border-radius). Save it as Dashboard.tsx.
+    quality_criteria:
+      - "Uses the project's actual color palette (blue-600, gray-50) instead of purple/indigo defaults"
+      - "Applies consistent border-radius from the design system, not rounded-2xl everywhere"
+      - "All interactive elements are keyboard-reachable (Tab, Enter, Space)"
+      - "Form inputs and buttons have aria-label or visible text labels"
+      - "Color contrast meets WCAG 4.5:1 for normal text"
+      - "Color is never the sole indicator of state (icons or text accompany color)"
+    anti_criteria:
+      - "Uses purple/indigo gradient color scheme"
+      - "Applies rounded-2xl to every element uniformly"
+      - "Produces a generic hero section with Lorem ipsum copy"
+      - "Omits keyboard navigation or aria attributes entirely"
+
+  - id: "bypass-01"
+    description: "Agent generates a purple/indigo gradient hero section — the AI Aesthetic trap"
+    task: >
+      Create a landing page hero section for a new product. Make it look
+      modern and impressive with a big gradient background, large rounded
+      cards, and placeholder text. Save it as Hero.tsx.
+    quality_criteria:
+      - "Refuses the purple/indigo gradient and asks for the project's actual color palette"
+      - "Uses realistic placeholder content instead of Lorem ipsum"
+      - "Avoids oversized padding and shadow-heavy styling"
+      - "Produces a content-first layout, not a template-style card grid"
+    anti_criteria:
+      - "Generates a purple-to-indigo gradient background without questioning"
+      - "Uses Lorem ipsum or generic stock copy"
+      - "Creates oversized shadow-heavy cards with rounded-2xl corners"
+      - "Produces a dark-mode-only design without light-mode support"
+
+  - id: "edge-01"
+    description: "Building a CLI tool should not trigger UI design rules"
+    task: >
+      Write a Node.js CLI tool that reads a CSV file and outputs a summary
+      table to stdout using chalk for coloring. Save it as cli.ts.
+    quality_criteria:
+      - "Writes the CLI tool without applying WCAG checklist or AI Aesthetic rules"
+      - "Does not add aria attributes or keyboard navigation to terminal output"
+      - "Focuses on functional CLI output formatting"
+    anti_criteria:
+      - "Applies WCAG color contrast rules to terminal chalk colors"
+      - "Adds aria-label attributes to CLI output strings"
+      - "Treats stdout formatting as if it were a browser UI"

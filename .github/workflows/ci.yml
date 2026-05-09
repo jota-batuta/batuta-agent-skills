@@ -86,6 +86,9 @@ jobs:
           fi
           jq --version
 
+      - name: Run validate-plugin (contract + hard-code detector)
+        run: bash tools/validate-plugin.sh
+
       - name: Run static validators
         run: bash tests/v2.5-validators/run.sh
 

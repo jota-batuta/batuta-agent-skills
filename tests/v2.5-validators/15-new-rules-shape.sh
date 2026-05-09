@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # 15-new-rules-shape.sh
-# Validates structural invariants for the two new rules introduced in the
-# agent-hardening slice (plan: docs/plans/active/2026-05-04-agent-hardening.md):
-#   rules/core/no-hardcoded-magic.md
-#   rules/core/model-routing.md
+# Validates structural invariants for the two rules introduced in the
+# agent-hardening slice:
+#   rules/core/no-hardcoded-magic.md  (simplified to constraints-only in v6.0)
+#   rules/core/model-routing.md       (full rule with examples and anti-patterns)
 #
-# Four checks per rule (per batuta-rule-authoring §A.4/§A.5):
-#   (a) ## Anti-patterns section is present.
-#   (b) ## Anti-patterns section is non-empty (has at least one non-blank line after heading).
-#   (c) Line count is between 50 and 200 inclusive.
-#   (d) Frontmatter does NOT contain `name:` or `description:` keys (SKILL.md-only fields).
+# Checks per rule (adapted from batuta-rule-authoring):
+#   - File exists
+#   - Has valid frontmatter (no name:/description: SKILL.md-only fields)
+#   - Has an Inviolable rules heading (numbered rules)
+#   - Full rules: ## Anti-patterns present, line count 50-200
+#   - Simplified rules: constraints-only (no Anti-patterns required, shorter)
 #
-# Contract introduced in v3.9 (agent-hardening PR).
+# Contract introduced in v3.9; updated in v6.0 for simplified rule format.
 
 set -uo pipefail
 
@@ -26,50 +27,26 @@ ok()   { echo "  OK   $1"; }
 miss() { echo "  MISS $1"; failed=1; }
 
 # ---------------------------------------------------------------------------
-# validate_rule <relative-path-from-repo-root>
-# Runs the four structural checks against one rule file.
+# validate_rule_common <relative-path-from-repo-root>
+# Checks shared by all rules: exists, valid frontmatter, has Inviolable rules.
 # ---------------------------------------------------------------------------
-validate_rule() {
+validate_rule_common() {
   local rel_path="$1"
   local abs_path="${REPO_ROOT}/${rel_path}"
 
-  # File must exist (rules-builder creates it; if not, every check fails)
   if [[ ! -f "$abs_path" ]]; then
-    miss "${rel_path} — file missing (rules-builder has not created it yet)"
-    return
+    miss "${rel_path} — file missing"
+    return 1
   fi
 
-  # (a) ## Anti-patterns heading present
-  if grep -q "^## Anti-patterns" "$abs_path"; then
-    ok "${rel_path} — ## Anti-patterns heading present"
+  # Inviolable rules heading present
+  if grep -qE '^## Inviolable rules' "$abs_path"; then
+    ok "${rel_path} — ## Inviolable rules heading present"
   else
-    miss "${rel_path} — ## Anti-patterns heading missing (required per §A.4)"
+    miss "${rel_path} — ## Inviolable rules heading missing"
   fi
 
-  # (b) ## Anti-patterns section is non-empty
-  # Strategy: grab lines after the heading, skip blanks, stop at next ## heading.
-  # If at least one non-blank, non-heading line exists, the section has content.
-  local after_heading
-  after_heading="$(awk '/^## Anti-patterns/{found=1; next} found && /^## /{exit} found{print}' "$abs_path" \
-                   | grep -v '^[[:space:]]*$' || true)"
-  if [[ -n "$after_heading" ]]; then
-    ok "${rel_path} — ## Anti-patterns section is non-empty"
-  else
-    miss "${rel_path} — ## Anti-patterns section is empty (at least one example required per §A.4)"
-  fi
-
-  # (c) Line count 50-200
-  local line_count
-  line_count="$(wc -l < "$abs_path")"
-  if [[ "$line_count" -ge 50 && "$line_count" -le 200 ]]; then
-    ok "${rel_path} — line count ${line_count} within 50-200 (§A.5)"
-  else
-    miss "${rel_path} — line count ${line_count} outside 50-200 range (§A.5)"
-  fi
-
-  # (d) Frontmatter must NOT contain `name:` or `description:` (SKILL.md-only fields).
-  # Only inspect the YAML frontmatter block (between the first pair of --- delimiters).
-  # Absence of frontmatter is fine — the check passes vacuously.
+  # Frontmatter must NOT contain name: or description: (SKILL.md-only fields)
   local in_frontmatter=0
   local found_skill_key=0
   while IFS= read -r line; do
@@ -91,15 +68,72 @@ validate_rule() {
   if [[ "$found_skill_key" -eq 0 ]]; then
     ok "${rel_path} — frontmatter does not contain name:/description: (SKILL.md-only fields)"
   else
-    miss "${rel_path} — frontmatter contains name: or description: (forbidden in rule files per §A.5; those keys belong in SKILL.md only)"
+    miss "${rel_path} — frontmatter contains name: or description: (forbidden in rule files)"
+  fi
+
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# validate_full_rule <relative-path>
+# Full rule: Anti-patterns required, line count 50-200.
+# ---------------------------------------------------------------------------
+validate_full_rule() {
+  local rel_path="$1"
+  local abs_path="${REPO_ROOT}/${rel_path}"
+
+  validate_rule_common "$rel_path" || return
+
+  # Anti-patterns heading present
+  if grep -q "^## Anti-patterns" "$abs_path"; then
+    ok "${rel_path} — ## Anti-patterns heading present"
+  else
+    miss "${rel_path} — ## Anti-patterns heading missing (required for full rules)"
+  fi
+
+  # Anti-patterns section is non-empty
+  local after_heading
+  after_heading="$(awk '/^## Anti-patterns/{found=1; next} found && /^## /{exit} found{print}' "$abs_path" \
+                   | grep -v '^[[:space:]]*$' || true)"
+  if [[ -n "$after_heading" ]]; then
+    ok "${rel_path} — ## Anti-patterns section is non-empty"
+  else
+    miss "${rel_path} — ## Anti-patterns section is empty"
+  fi
+
+  # Line count 50-200
+  local line_count
+  line_count="$(wc -l < "$abs_path")"
+  if [[ "$line_count" -ge 50 && "$line_count" -le 200 ]]; then
+    ok "${rel_path} — line count ${line_count} within 50-200"
+  else
+    miss "${rel_path} — line count ${line_count} outside 50-200 range"
   fi
 }
 
 # ---------------------------------------------------------------------------
-# Run checks for both new rules
+# validate_simplified_rule <relative-path>
+# Simplified rule: constraints-only, no Anti-patterns required, no line-count floor.
 # ---------------------------------------------------------------------------
-validate_rule "rules/core/no-hardcoded-magic.md"
-validate_rule "rules/core/model-routing.md"
+validate_simplified_rule() {
+  local rel_path="$1"
+  local abs_path="${REPO_ROOT}/${rel_path}"
+
+  validate_rule_common "$rel_path" || return
+
+  # Simplified rules have valid frontmatter with title
+  if grep -qE '^title: ' "$abs_path"; then
+    ok "${rel_path} — frontmatter has title"
+  else
+    miss "${rel_path} — frontmatter missing title"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Run checks
+# ---------------------------------------------------------------------------
+validate_simplified_rule "rules/core/no-hardcoded-magic.md"
+validate_full_rule "rules/core/model-routing.md"
 
 if [[ ${failed} -eq 0 ]]; then
   echo "[${case_name}] PASS"

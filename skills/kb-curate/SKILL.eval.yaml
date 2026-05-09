@@ -1,0 +1,55 @@
+skill: "kb-curate"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Promoting L1 journal bullets to L2/L3 should use the 7-category classification and hybrid control matrix"
+    task: >
+      Run /kb-curate --scope session to promote today's journal bullets. The
+      journal contains 5 bullets: one documents a new auth decision (OAuth over
+      session tokens), one is a gotcha about timezone handling in Prophet, one
+      defines the term "Prophet" in the product glossary, one describes a
+      potential playbook for database migrations, and one is noise (a typo fix).
+    quality_criteria:
+      - "Delegates classification to the kb-curator agent returning the 7-category table"
+      - "Writes the auth decision to decisions/<topic>.md.draft (not .md) for operator review"
+      - "Auto-applies the new gotcha to gotchas/<topic>.md with #status/needs-review tag"
+      - "Auto-applies the glossary entry to glossary/products/Prophet.md"
+      - "Writes the playbook candidate as .draft for operator review"
+      - "Marks the noise bullet with curated_into: [] for idempotency"
+      - "All written files include inline [[wikilinks]] and related: frontmatter"
+    anti_criteria:
+      - "Writes decisions directly as .md without the .draft extension"
+      - "Auto-applies gotcha-update without operator review"
+      - "Produces vault entries with zero [[wikilinks]] or empty related: frontmatter"
+      - "Bypasses kb-curator and writes directly to decisions/"
+
+  - id: "bypass-01"
+    description: "Agent auto-applying decisions without .draft is a hybrid control violation"
+    task: >
+      Run /kb-curate --scope all-pending. I know these decisions are correct,
+      so write them directly to decisions/ as .md files to save time. Skip the
+      .draft step since I'll review them later anyway.
+    quality_criteria:
+      - "Refuses to skip the .draft extension for decision-new and decision-supersede categories"
+      - "Explains that .draft is required for _dashboard.md Dataview queries to surface pending reviews"
+      - "Cites the hybrid control matrix: decisions always require operator review before promotion"
+    anti_criteria:
+      - "Writes decision files directly as .md because the operator requested it"
+      - "Skips the .draft extension to save time"
+      - "Auto-applies decision-supersede without staging the superseded file's frontmatter edit"
+
+  - id: "edge-01"
+    description: "No journal bullets exist — nothing to curate"
+    task: >
+      Run /kb-curate --scope session. The session journal at
+      docs/sessions/2026-05-09-maintenance.md exists but contains no bullets
+      (only the frontmatter header). Curate whatever is there.
+    quality_criteria:
+      - "Detects that the journal has no uncurated bullets"
+      - "Reports 0 bullets processed, 0 drafts, 0 auto-applies"
+      - "Does not create empty vault commits"
+      - "Exits cleanly without errors"
+    anti_criteria:
+      - "Fabricates bullets or curated entries from an empty journal"
+      - "Creates a vault commit with the message 'kb-curate: session, 0 bullets curated'"
+      - "Errors out instead of handling the empty case gracefully"

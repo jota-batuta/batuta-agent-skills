@@ -12,6 +12,12 @@ set -euo pipefail
 trap 'exit 0' ERR
 
 # ---------------------------------------------------------------------------
+# Source shared config library
+# ---------------------------------------------------------------------------
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
+
+# ---------------------------------------------------------------------------
 # Root resolution: $CLAUDE_PLUGIN_ROOT is set by the Claude Code harness
 # when the hook is loaded from a plugin. Fall back to script location.
 # ---------------------------------------------------------------------------
@@ -28,10 +34,6 @@ hooks_json="$hooks_dir/hooks.json"
 repo_root="$(git -C "$plugin_root" rev-parse --show-toplevel 2>/dev/null || echo "$plugin_root")"
 claude_dir="$repo_root/.claude"
 debug_log="$claude_dir/kb-debug.log"
-
-_log() {
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $1" >> "$debug_log" 2>/dev/null || true
-}
 
 warnings=()
 
@@ -124,9 +126,13 @@ fi
 # ---------------------------------------------------------------------------
 stale_pending=()
 if [[ -d "$claude_dir" ]]; then
-  while IFS= read -r marker; do
-    stale_pending+=("$(basename "$marker")")
-  done < <(find "$claude_dir" -maxdepth 1 -name '.intent-pending-*' -mmin +120 2>/dev/null)
+  _stale_marker_prefix=$(marker_name "intent_pending")
+  _stale_threshold=$(timeout_val "stale_marker_warn_minutes")
+  if [[ -n "$_stale_marker_prefix" && -n "$_stale_threshold" ]]; then
+    while IFS= read -r marker; do
+      stale_pending+=("$(basename "$marker")")
+    done < <(find "$claude_dir" -maxdepth 1 -name "${_stale_marker_prefix}*" -mmin +"${_stale_threshold}" 2>/dev/null)
+  fi
 fi
 
 # ---------------------------------------------------------------------------

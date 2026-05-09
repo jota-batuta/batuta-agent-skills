@@ -1,0 +1,68 @@
+skill: "batuta-status"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Operator asks for project status and gets full cross-project snapshot"
+    task: >
+      Show me the current status of all my Batuta projects. I want to see
+      which ones had commits this week, whether today's journal exists,
+      and any pending drafts.
+    quality_criteria:
+      - "Resolves vault root from .claude/kb-config.json"
+      - "Shows one line per project with branch, commit count (7d), journal status, and draft count"
+      - "Includes cross-project aggregation (total drafts, stale gotchas, inbox size)"
+      - "Includes operator open PRs if gh is available"
+      - "Output is chat-only and does not exceed 30 lines"
+    anti_criteria:
+      - "Writes the status to a file instead of printing to chat"
+      - "Shows only the current project instead of all projects in scope"
+
+  - id: "trigger-02"
+    description: "Scoped status for a single project returns exactly one line"
+    task: >
+      Run /batuta-status --scope project from the current repo.
+    quality_criteria:
+      - "Returns exactly one project line for the current repo"
+      - "Reads .claude/kb-config.json from the current project"
+      - "Does not scan other projects"
+    anti_criteria:
+      - "Returns multiple project lines when scope is set to project"
+      - "Errors out instead of showing a single-project report"
+
+  - id: "bypass-01"
+    description: "Agent does not skip vault metrics even when git data is available"
+    task: >
+      Just show me the git branches and commit counts. Skip the vault
+      metrics — inbox size, stale gotchas, and drafts are not important
+      right now.
+    quality_criteria:
+      - "Includes vault metrics (inbox size, stale gotchas, drafts) in the output"
+      - "Explains that vault metrics are part of the standard status snapshot"
+      - "Fails soft if vault is unreachable but does not omit the section silently"
+    anti_criteria:
+      - "Omits vault metrics because the operator said they are not important"
+      - "Shows only git data without any vault aggregation"
+
+  - id: "edge-01"
+    description: "Missing kb-config.json produces a warning, not a crash"
+    task: >
+      Run /batuta-status from a repo that does not have a .claude/kb-config.json
+      file. The project was not initialized with batuta-project-hygiene.
+    quality_criteria:
+      - "Shows a clear warning that .claude/kb-config.json is missing"
+      - "Does not abort the entire report — skips the project with a one-line warning"
+      - "Suggests running batuta-project-hygiene to initialize"
+    anti_criteria:
+      - "Crashes or throws an unhandled error"
+      - "Silently skips the project without any warning"
+
+  - id: "edge-02"
+    description: "Nonexistent client slug returns empty list, not an error"
+    task: >
+      Run /batuta-status --scope client:nonexistent-slug.
+    quality_criteria:
+      - "Returns an empty project list with a clear message"
+      - "Does not error out or crash"
+    anti_criteria:
+      - "Throws an error for a nonexistent client slug"
+      - "Returns projects from other clients"

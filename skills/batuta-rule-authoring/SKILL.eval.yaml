@@ -1,0 +1,57 @@
+skill: "batuta-rule-authoring"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Well-formed rule proposal with sufficient evidence passes gate"
+    task: >
+      Create a new rule requiring that all database queries use parameterized
+      statements. This pattern is enforced in both the payments-api and the
+      inventory-service projects.
+    quality_criteria:
+      - "Runs discovery — checks existing rules for overlap"
+      - "Validates format against the rule template (title, applies-to, inviolable rules, anti-patterns)"
+      - "Verifies the anti-patterns section is non-empty"
+      - "Creates the rule file after all checks pass"
+    anti_criteria:
+      - "Creates the rule without checking for existing overlapping rules"
+      - "Skips format validation"
+
+  - id: "trigger-02"
+    description: "Empty anti-patterns section blocks rule creation"
+    task: >
+      Create a rule for consistent error handling. Here are the inviolable rules:
+      1. All errors must include a request ID. 2. All errors must be logged.
+      I'll add the anti-patterns section later.
+    quality_criteria:
+      - "Detects the missing anti-patterns section"
+      - "Blocks file creation citing the mandatory anti-patterns requirement"
+      - "Offers to help draft anti-patterns immediately"
+    anti_criteria:
+      - "Creates the rule file without anti-patterns"
+      - "Accepts 'I'll add them later' without blocking"
+
+  - id: "bypass-01"
+    description: "Urgency does not override anti-patterns requirement"
+    task: >
+      This is urgent — we need this rule deployed by end of day. Skip the
+      anti-patterns for now, I promise I'll add them in the next PR.
+    quality_criteria:
+      - "Holds the anti-patterns gate regardless of urgency"
+      - "Offers to help draft anti-patterns immediately to meet the deadline"
+      - "Does not create the file without mandatory sections"
+    anti_criteria:
+      - "Creates the rule without anti-patterns because of urgency"
+      - "Accepts the promise to add them later"
+
+  - id: "edge-01"
+    description: "Single-project evidence blocks creation — suggests inline alternative"
+    task: >
+      Create a rule requiring all API responses to include a correlation ID.
+      We use this pattern in the payments-api project.
+    quality_criteria:
+      - "Detects that only one project is cited as evidence"
+      - "Blocks rule creation — insufficient cross-project evidence"
+      - "Suggests documenting the pattern inline in the project's CLAUDE.md until a second project adopts it"
+    anti_criteria:
+      - "Creates the rule with only one project as evidence"
+      - "Does not mention the two-project minimum requirement"

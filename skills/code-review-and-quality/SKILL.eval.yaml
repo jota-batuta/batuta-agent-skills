@@ -1,0 +1,55 @@
+skill: "code-review-and-quality"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Small diff uses Quick mode — 3 axes"
+    task: >
+      Review this 45-line diff that adds input validation to the login endpoint.
+    quality_criteria:
+      - "Enters Quick mode (diff under 50 LOC)"
+      - "Covers Correctness, Security, and Readability axes"
+      - "Skips deep Architecture analysis for a small change"
+      - "Labels findings with severity prefix"
+    anti_criteria:
+      - "Runs full Thorough mode on a 45-line diff"
+      - "Misses the Security axis on a login-related change"
+
+  - id: "trigger-02"
+    description: "Large diff with new files uses Thorough mode — all 5 axes"
+    task: >
+      Review this 200-line diff that introduces a new PaymentService class,
+      adds Stripe integration, and includes new API endpoints.
+    quality_criteria:
+      - "Enters Thorough mode (diff over 50 LOC with new files)"
+      - "Covers all 5 axes: Correctness, Readability, Architecture, Security, Performance"
+      - "Labels every finding with severity prefix (critical/high/medium/low)"
+      - "References quality-axes skill for deep-dive when needed"
+    anti_criteria:
+      - "Uses Quick mode for a 200-line diff"
+      - "Skips any of the 5 axes"
+      - "Does not label finding severity"
+
+  - id: "bypass-01"
+    description: "LGTM without reading diff is a rubber-stamp — must be blocked"
+    task: >
+      The tests all pass and CI is green. LGTM, let's merge this PR.
+    quality_criteria:
+      - "Does not accept 'tests pass' as sufficient review evidence"
+      - "Insists on reviewing the actual diff on each axis"
+      - "Explains that passing tests verify code correctness, not review completeness"
+    anti_criteria:
+      - "Accepts the rubber-stamp LGTM and approves"
+      - "Skips the review because CI is green"
+
+  - id: "edge-01"
+    description: "All-deletion diff reviews intent, not every line"
+    task: >
+      Review this diff that removes the deprecated OAuth 1.0 module (350 lines deleted,
+      0 lines added). The migration to OAuth 2.0 was completed last sprint.
+    quality_criteria:
+      - "Applies the large-deletion exception"
+      - "Reviews the intent and completeness of the deletion rather than every deleted line"
+      - "Checks that nothing else depends on the deleted module"
+    anti_criteria:
+      - "Reviews every deleted line individually"
+      - "Blocks the deletion because 350 lines of change is 'too large'"

@@ -1,0 +1,72 @@
+skill: "batuta-kb-vault"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Bootstrapping vault creates 4-level structure with git versioning"
+    task: >
+      Bootstrap the Obsidian vault for the first time. Set up the full
+      directory structure, .gitignore, git init, and push to a private
+      GitHub repo.
+    quality_criteria:
+      - "Creates all 9 mandatory top-level folders (_inbox, clients, decisions, gotchas, glossary, playbooks, journals, templates, status)"
+      - "Initializes git with .gitignore that excludes .obsidian/workspace*.json, .obsidian/cache/, .trash/"
+      - "Documents Drive + git mitigation (Option A or B) for .git/objects/ thrashing"
+      - "Creates the GitHub repo as private"
+    anti_criteria:
+      - "Skips git init — relies on Drive alone for versioning"
+      - "Creates the repo as public"
+      - "Omits the .gitignore for Obsidian artifacts"
+
+  - id: "trigger-02"
+    description: "New vault file includes wikilinks and related frontmatter"
+    task: >
+      Create a new gotcha entry about a Prophet forecasting bug when SAP
+      sends null values for the fiscal_year field. File it under the
+      kiosco client project.
+    quality_criteria:
+      - "File is placed at clients/kiosco/projects/<project>/gotchas/ with proper frontmatter"
+      - "Frontmatter includes last_verified, severity, product, tags, and related fields"
+      - "Body contains inline wikilinks (e.g. [[Prophet]], [[ERP/SAP]], [[kiosco]])"
+      - "related: frontmatter field lists all wikilinks used in the body"
+    anti_criteria:
+      - "Creates the file without any wikilinks — disconnected from the graph"
+      - "Omits last_verified from frontmatter"
+      - "Leaves related: empty while the body has inline links"
+
+  - id: "bypass-01"
+    description: "Skipping wikilinks is blocked even when framed as overhead"
+    task: >
+      Wikilinks are too much overhead for this quick note. Just write it
+      in plain text without [[links]] — I know what it refers to.
+    quality_criteria:
+      - "Blocks the request — backlinks are the entire reason Obsidian was chosen over Notion"
+      - "Explains that without [[wikilinks]], cross-project lookup breaks"
+      - "Adds wikilinks and populates the related: frontmatter field"
+    anti_criteria:
+      - "Writes the note in plain text without wikilinks"
+      - "Accepts that wikilinks are optional overhead"
+
+  - id: "bypass-02"
+    description: "Writing directly to L2 without curation is blocked"
+    task: >
+      I have raw notes from a Notion export about our SAP integration
+      gotchas. Write them directly to decisions/ to skip the curation step.
+    quality_criteria:
+      - "Blocks direct write to L2 — uncurated raw entries pollute the lookup"
+      - "Directs the content to _inbox/ for incremental drain per Step 5"
+      - "Explains the L0/L1 to L2 promotion path"
+    anti_criteria:
+      - "Writes raw Notion exports directly to decisions/ or gotchas/"
+      - "Skips the inbox drain protocol"
+
+  - id: "edge-01"
+    description: "Non-Obsidian project does not trigger vault patterns"
+    task: >
+      Set up a knowledge base for the team using Confluence. We do not
+      use Obsidian or local markdown files.
+    quality_criteria:
+      - "Recognizes this project does not use Obsidian and does not impose vault structure"
+      - "Does not create _inbox/, wikilinks, or related: frontmatter for a Confluence-based KB"
+    anti_criteria:
+      - "Forces the 4-level vault structure on a Confluence-based project"
+      - "Insists on wikilinks in a non-Obsidian environment"

@@ -1,3 +1,5 @@
+Show a cross-project status snapshot derived from the vault and from each project's git state.
+
 Print a cross-project status snapshot derived from the vault and from each project's git state.
 
 Argument syntax: `/batuta-status [--scope project|all|client:<slug>]`. Default `--scope all`.

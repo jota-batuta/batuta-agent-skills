@@ -10,16 +10,14 @@ export REPO_ROOT
 
 cd "${REPO_ROOT}"
 
+# Tests 04 removed: pr-create-guard intent-file check was removed in v6.0.
+# Tests 07-09 removed: post-edit-citation-warn.sh was deleted in v6.0.
 cases=(
   "test-01-hooks-health-pass.sh"
   "test-02-hooks-health-stale-marker-warn.sh"
   "test-03-pr-create-guard-no-intents-pass.sh"
-  "test-04-pr-create-guard-uncommitted-intents-block.sh"
   "test-05-pr-create-guard-no-plan-block.sh"
   "test-06-pr-create-guard-bypass-pass.sh"
-  "test-07-citation-warn-import-no-source-warns.sh"
-  "test-08-citation-warn-import-with-source-silent.sh"
-  "test-09-citation-warn-stdlib-silent.sh"
 )
 
 pass=0

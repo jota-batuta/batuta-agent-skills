@@ -6,18 +6,13 @@
 # handles the delegate-vs-edit tradeoff for everything else.
 #
 # What this hook enforces:
-#   HARD-BLOCK (always, regardless of path): kill-switch paths that would let the main
-#   self-disable the plugin or commit secrets:
-#     .claude/settings*.json  — disabling audit triggers
-#     .claude/hooks/*         — disabling this hook itself
-#     .claude/agents/*        — overwriting agent contracts
-#     .env, .env.*            — committing secrets
-#     secrets/*               — committing secrets
+#   HARD-BLOCK (always, regardless of path): kill-switch paths configured in
+#   plugin-config.json → kill_switch_paths[] plus confirmed-marker paths.
 #
 #   ALLOW: everything else, including project source files. Claude decides when to delegate
 #   via Task() vs edit directly, per its native judgment.
 #
-# Subagent bypass: agents bypass this hook entirely via agent_id in stdin JSON.
+# Subagent bypass: agents bypass this hook entirely via is_subagent().
 #
 # Failure mode (v2.7): if JSON parsing fails, ALLOW (do not lock the session). The hook's
 # purpose is kill-switch protection, not workflow enforcement — a parse error should not
@@ -40,6 +35,9 @@
 
 set -uo pipefail
 
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
+
 input=$(cat)
 
 # Fail-soft: jq is required to parse stdin JSON. If missing, allow with warning.
@@ -48,12 +46,8 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 0
 fi
 
-# Subagent detection: the official schema places agent_id in the stdin JSON when the hook
-# fires inside a subagent (Task delegation). To prevent bypass via crafted JSON, we ALSO
-# require that hook_event_name is the expected "PreToolUse".
-event_name=$(echo "$input" | jq -r '.hook_event_name // empty' 2>/dev/null)
-agent_id=$(echo "$input" | jq -r '.agent_id // empty' 2>/dev/null)
-if [[ "$event_name" == "PreToolUse" && -n "$agent_id" ]]; then
+# Subagent detection via lib.sh — requires BOTH agent_id AND hook_event_name == "PreToolUse".
+if is_subagent "$input"; then
   exit 0
 fi
 
@@ -72,40 +66,26 @@ fi
 # match the same case patterns as POSIX paths.
 file_path="${file_path//\\//}"
 
-# Path-traversal guard: refuse paths where ".." appears as a path SEGMENT.
-case "$file_path" in
-  ../*|*/..|*/../*|..)
-    echo "delegation-guard.sh: path contains '..' as a segment (potential traversal). Refusing for safety." >&2
-    echo "Path received: $file_path" >&2
-    exit 2
-    ;;
-esac
+# Path-traversal guard via lib.sh.
+if has_path_traversal "$file_path"; then
+  echo "delegation-guard.sh: path contains '..' as a segment (potential traversal). Refusing for safety." >&2
+  echo "Path received: $file_path" >&2
+  exit 2
+fi
 
 # KILL-SWITCH BLOCKLIST: paths the main agent must NEVER write to.
-# These are the plugin's own enforcement surfaces — allowing the main to edit them
-# would let it disable the audit chain or commit secrets with one Edit.
+# Configured in plugin-config.json → kill_switch_paths[] plus confirmed-marker paths.
 # Subagents that legitimately need to write here (e.g. agent-architect creating
-# .claude/agents/<x>.md) bypass this script entirely via agent_id above.
-case "$file_path" in
-  */.claude/.intent-and-routing-confirmed-*|.claude/.intent-and-routing-confirmed-*|\
-  */.claude/settings*.json|.claude/settings*.json|\
-  */.claude/hooks/*|.claude/hooks/*|\
-  */hooks/*.json|hooks/*.json|\
-  */hooks/*.sh|hooks/*.sh|\
-  */.claude/agents/*|.claude/agents/*|\
-  */.env|.env|\
-  */.env.*|.env.*|\
-  */.envrc|.envrc|\
-  */secrets/*|secrets/*)
-    cat >&2 <<EOF
+# .claude/agents/<x>.md) bypass this script entirely via is_subagent() above.
+if is_kill_switch_path "$file_path"; then
+  cat >&2 <<EOF
 RULE #0 violated (kill-switch): the main agent cannot modify ${file_path} directly.
 This file controls plugin enforcement; modifying it from the main would self-disable safeguards.
 Delegate to a subagent (haiku for trivial edits, implementer for substantive changes), or update via the plugin's installation flow.
-Use Write to \`.intent-pending-*\` instead — the hook promotes pending to confirmed on operator confirmation.
+Use Write to \`$(marker_name "intent_pending")*\` instead — the hook promotes pending to confirmed on operator confirmation.
 EOF
-    exit 2
-    ;;
-esac
+  exit 2
+fi
 
 # All other paths: ALLOW. Claude uses its native judgment for the delegate-vs-edit decision.
 # See docs/adr/0006-trust-native-delegation.md for rationale.

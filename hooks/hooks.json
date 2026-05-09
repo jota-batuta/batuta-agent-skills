@@ -1,5 +1,5 @@
 {
-  "description": "Batuta agent skills: native-delegation main + post-edit audit chain + kill-switches + pr-merge guard + per-turn intent gate + session hooks-health + pr-create guard + citation-warn",
+  "description": "Batuta agent skills: native-delegation main + post-edit audit chain + kill-switches + pr-merge guard + per-turn intent gate + session hooks-health + pr-create guard",
   "hooks": {
     "SessionStart": [
       {
@@ -17,17 +17,6 @@
         ]
       }
     ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/clear-intent-marker.sh",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "ExitPlanMode",
@@ -35,16 +24,6 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-exit-plan-mode.sh",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/post-edit-citation-warn.sh",
             "timeout": 10
           }
         ]
@@ -107,16 +86,6 @@
           {
             "type": "command",
             "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/pre-edit-intent-gate.sh",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Task",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/pre-task-routing-gate.sh",
             "timeout": 5
           }
         ]

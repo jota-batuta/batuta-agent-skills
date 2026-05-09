@@ -24,6 +24,10 @@
 set +e
 trap 'exit 0' ERR
 
+# Source shared config library for config-driven values.
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
+
 # Resolve the repo root from the hook's working directory (git invokes hooks with
 # cwd = top of working tree).
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -31,7 +35,7 @@ if [[ -z "$repo_root" ]]; then
   exit 0
 fi
 
-config_file="$repo_root/.claude/kb-config.json"
+config_file="$repo_root/$(config_path "kb_config")"
 debug_log="$repo_root/.claude/kb-debug.log"
 
 # Opt-in gate: no config file → silent no-op.
@@ -63,7 +67,7 @@ kb_pipeline_enabled=$(jq -r '.kb_pipeline_enabled // false' "$config_file" 2>/de
 # If vault_root in the project config is empty, a shell template, or the default placeholder,
 # fall back to the global config. This prevents auto-provisioned projects from silently writing
 # to a non-existent path.
-global_vault_file="${HOME}/.claude/kb-vault.json"
+global_vault_file="${HOME}/$(config_path "kb_vault_global")"
 vault_root_is_template=false
 [[ "$vault_root" == *'${'* || "$vault_root" == "~/batuta-kb" || -z "$vault_root" ]] && vault_root_is_template=true
 if $vault_root_is_template && [[ -f "$global_vault_file" ]] && command -v jq >/dev/null 2>&1; then
@@ -107,7 +111,7 @@ case "$slug_strategy" in
         ;;
     esac
     if [[ -z "$slug" ]]; then
-      first_plan=$(ls -t "$repo_root/docs/plans/active/"*.md 2>/dev/null | head -1)
+      first_plan=$(ls -t "$repo_root/$(config_path "plans_active")/"*.md 2>/dev/null | head -1)
       if [[ -n "$first_plan" ]]; then
         slug=$(basename "$first_plan" .md)
         slug="${slug#$date_ymd-}"
@@ -120,12 +124,12 @@ case "$slug_strategy" in
 esac
 
 # Ensure docs/sessions/ exists.
-sessions_dir="$repo_root/docs/sessions"
+sessions_dir="$repo_root/$(config_path "sessions")"
 mkdir -p "$sessions_dir" 2>/dev/null || true
 
 journal="$sessions_dir/$date_ymd-$slug.md"
 plan_link=""
-first_plan=$(ls -t "$repo_root/docs/plans/active/"*.md 2>/dev/null | head -1)
+first_plan=$(ls -t "$repo_root/$(config_path "plans_active")/"*.md 2>/dev/null | head -1)
 if [[ -n "$first_plan" ]]; then
   plan_link="docs/plans/active/$(basename "$first_plan")"
 fi
@@ -307,7 +311,7 @@ if [[ "$adr_mirror_enabled" == "true" && -n "$vault_root" ]]; then
     # Collect all ADR files touched in this commit.
     while IFS= read -r committed_file; do
       # Match pattern: docs/adr/NNNN-*.md (one or more digits, hyphen, anything, .md).
-      if [[ "$committed_file" =~ ^docs/adr/[0-9]+-.*\.md$ ]]; then
+      if [[ "$committed_file" =~ ^$(config_path "adrs")/[0-9]+-.*\.md$ ]]; then
         _mirror_adr "$committed_file" "$vault_root_expanded"
       fi
     done < <(git -C "$repo_root" diff-tree --no-commit-id --name-only -r "$sha_full" 2>/dev/null)
@@ -335,11 +339,17 @@ if [[ "$kb_pipeline_enabled" == "true" ]]; then
   if ! command -v claude >/dev/null 2>&1; then
     echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) WARN post-commit-kb: kb_pipeline_enabled=true but 'claude' CLI not found in PATH — skipping agent dispatch" >> "$debug_log" 2>/dev/null
   else
-    # Precondition 2: kb-pipeline agent definition exists. Lookup chain:
-    #   project-local → plugin install (canonical for consumer repos) → plugin repo root (dev-time).
+    # Precondition 2: kb-pipeline agent definition exists.
+    # Lookup chain (first match wins):
+    #   1. project-local: <project>/.claude/agents/kb-pipeline.md (project copied agent)
+    #   2. plugin install: ~/.claude/plugins/marketplaces/<plugin-name>/agents/kb-pipeline.md
+    #   3. plugin repo root: <repo>/agents/kb-pipeline.md (dev-time only)
+    # If none found, log a WARN with all 3 paths tried and skip dispatch.
+    # The marketplace path (2) uses cfg('.plugin.name') from plugin-config.json to avoid
+    # hard-coding the plugin name. If the marketplace layout changes, update path (2) only.
     agent_def=""
     project_local_agent="$repo_root/.claude/agents/kb-pipeline.md"
-    plugin_install_agent="${HOME}/.claude/plugins/marketplaces/batuta-agent-skills/agents/kb-pipeline.md"
+    plugin_install_agent="${HOME}/.claude/plugins/marketplaces/$(cfg '.plugin.name')/agents/kb-pipeline.md"
     plugin_repo_agent="$repo_root/agents/kb-pipeline.md"
 
     if [[ -f "$project_local_agent" ]]; then
@@ -385,7 +395,7 @@ if [[ "$kb_pipeline_enabled" == "true" ]]; then
         # The prompt instructs the main agent to delegate to the kb-pipeline subagent
         # via the Task tool, so the agent definition at agents/kb-pipeline.md governs
         # the actual workflow (Capture → Curate → Write phases).
-        nohup timeout 120 claude --print --no-interactive --permission-mode acceptEdits \
+        nohup timeout "$(timeout_val "kb_pipeline_watchdog_seconds")" claude --print --no-interactive --permission-mode acceptEdits \
           "Use the Task tool to delegate to the kb-pipeline subagent. Pass this context: SHA=$sha_full, REPO_ROOT=$repo_root, CLIENT=$client, PROJECT=$project, VAULT_ROOT=$vault_root_resolved, LOG_FILE=$log_file. The kb-pipeline agent reads its own workflow from agents/kb-pipeline.md and executes the Capture/Curate/Write phases against the commit diff. Return when the agent emits its KB_PIPELINE: terminator." \
           >> "$log_file" 2>&1 &
         disown

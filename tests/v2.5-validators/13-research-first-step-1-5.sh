@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # 13-research-first-step-1-5.sh
-# Validates the v3.8 Sprint 2 addition of Step 1.5 (Local KB lookup) to
-# research-first-dev SKILL.md, ensuring the staleness policy is encoded and
-# the lookup ordering (L2 > L3 > L1) is documented.
+# Validates the research-first-dev SKILL.md structure after v6.0 simplification.
+# The skill was reduced from 153 to ~41 lines. Step 1.5, staleness policy,
+# dual-cite format, Anti-Rationalizations, Red Flags, and Verification sections
+# were removed. The simplified structure retains: 6-layer harness mandate,
+# KB lookup order, citation format, and no-prior-art fallback.
+# Contract updated in v6.0.
 
 set -uo pipefail
 
@@ -28,24 +31,23 @@ skill="skills/research-first-dev/SKILL.md"
 echo "[13-research-first-step-1-5] starting"
 
 check "research-first-dev/SKILL.md exists" "test -f $skill"
-check "Step 1.5 heading exists" "grep -qE '^### Step 1\\.5' $skill"
-check "Step 1.5 documents L2 > L3 > L1 priority" "grep -qE 'L2.*>.*L3.*>.*L1|priority L2' $skill"
-check "Step 1.5 references vault_root" "grep -qE 'vault_root|VAULT_ROOT' $skill"
-check "Step 1.5 references kb-config.json" "grep -qE 'kb-config\\.json' $skill"
-check "Step 1.5 documents staleness policy" "grep -qE 'last_verified.*4 mes|< 4 meses|4–12 meses|> 12 meses' $skill"
-check "Step 1.5 mentions structural decisions always need Step 2" "grep -qE 'always run Step 2|Always run Step 2|cannot substitute' $skill"
-check "Step 1.5 documents fallback when vault unreachable" "grep -qE 'unreachable|Drive offline|skip Step 1\\.5' $skill"
-check "Step 1.5 has L1 disclaimer 'no curado'" "grep -qE 'no curado|verificá' $skill"
-check "Step 1.5 documents dual-cite format" "grep -qE 'Cross-checked' $skill"
-check "Step 1.5 documents local-only cite format" "grep -qE 'Source: ~/batuta-kb|Source: \\\$VAULT_ROOT|Source: <vault_root>' $skill"
-check "Step 1.5 ordered between Step 1 and Step 2" "awk '/^### Step 1:/,/^### Step 2/' $skill | grep -qE '^### Step 1\\.5'"
-check "Step 2 still present after Step 1.5" "grep -qE '^### Step 2' $skill"
-check "Step 4 (citation) still present" "grep -qE '^### Step 4' $skill"
 
-# Companion sanity: Anti-Rationalizations and Red Flags untouched in shape.
-check "Anti-Rationalizations section intact" "grep -qE '^## Anti-Rationalizations' $skill"
-check "Red Flags section intact" "grep -qE '^## Red Flags' $skill"
-check "Verification section intact" "grep -qE '^## Verification' $skill"
+# --- 6-Layer Harness Mandate ---
+check "6-Layer Harness Mandate section present" "grep -qE '^## 6-Layer Harness Mandate' $skill"
+
+# --- KB Lookup Order ---
+check "KB Lookup Order section present" "grep -qE '^## KB Lookup Order' $skill"
+check "KB lookup documents L2 > L3 > L1 priority" "grep -qE 'L2.*>.*L3.*>.*L1|L2 curated.*L3.*L1' $skill"
+check "KB lookup references vault_root" "grep -qE 'vault_root|VAULT_ROOT' $skill"
+check "KB lookup documents staleness policy" "grep -qE 'months.*stale|trustworthy|verification' $skill"
+
+# --- Citation Format ---
+check "Citation Format section present" "grep -qE '^## Citation Format' $skill"
+check "Citation includes Source: comment format" "grep -qE 'Source:' $skill"
+check "Citation includes verified date pattern" "grep -qE 'verified.*YYYY' $skill"
+
+# --- No Prior Art Found ---
+check "No Prior Art Found section present" "grep -qE '^## No Prior Art Found' $skill"
 
 if [[ $fail -gt 0 ]]; then
   echo "[13-research-first-step-1-5] FAIL — $fail check(s) failed, $pass passed"
