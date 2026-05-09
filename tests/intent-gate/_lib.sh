@@ -179,6 +179,24 @@ run_edit_gate() {
   return "$rc"
 }
 
+# Run pre-edit-intent-gate.sh for a Bash tool call.
+# Prints "EXIT=<code> STDERR=<text>" for assertion.
+run_bash_gate() {
+  local command="$1"
+  local input
+  input=$(printf '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"%s"}}' "$command")
+  local stderr_capture
+  stderr_capture=$(mktemp)
+  CLAUDE_PROJECT_DIR="$PROJECT_ROOT" \
+    bash "$REPO_ROOT/hooks/pre-edit-intent-gate.sh" <<< "$input" 2>"$stderr_capture"
+  local rc=$?
+  local err
+  err=$(cat "$stderr_capture")
+  rm -f "$stderr_capture"
+  printf 'EXIT=%d STDERR=%s' "$rc" "$err"
+  return "$rc"
+}
+
 # Run pre-task-routing-gate.sh against a synthetic Task tool call.
 run_routing_gate() {
   local input

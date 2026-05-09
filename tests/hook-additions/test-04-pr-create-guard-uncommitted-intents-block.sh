@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # test-04: pre-pr-create-guard.sh — gh pr create with an uncommitted docs/intents/ file
-# → exit 1 (blocked).
+# → exit 2 (blocked).
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,7 +28,7 @@ out="$(run_hook "pre-pr-create-guard.sh" "$stdin_json")"
 echo "${TEST_NAME}: $out"
 
 fail=0
-assert_exit 1 "$out" "${TEST_NAME}:exit" || fail=1
+assert_exit 2 "$out" "${TEST_NAME}:exit" || fail=1
 assert_output_contains "BLOCKED" "$out" "${TEST_NAME}:stderr-blocked" || fail=1
 
 [[ $fail -eq 0 ]] && exit 0 || exit 1

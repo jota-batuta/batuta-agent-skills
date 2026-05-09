@@ -24,6 +24,7 @@ cases=(
   "09-non-confirmation-clears-pending.sh"
   "10-no-pending-dale-noop.sh"
   "11-promotion-preserves-content.sh"
+  "12-bash-no-marker-blocks.sh"
 )
 
 pass=0

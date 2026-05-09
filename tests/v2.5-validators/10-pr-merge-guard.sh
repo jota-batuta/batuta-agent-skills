@@ -62,16 +62,16 @@ else
     && ok "block message instructs the operator on the env-var override" \
     || miss "block message must show the operator how to override (e.g. 'BATUTA_ALLOW_PR_MERGE=1 claude')"
 
-  # The block path must exit 1. The heredoc starting with 'RULE violated:' runs
-  # ~21 lines through the closing 'EOF', then the next line is 'exit 1'. We use
+  # The block path must exit 2. The heredoc starting with 'RULE violated:' runs
+  # ~21 lines through the closing 'EOF', then the next line is 'exit 2'. We use
   # -A28 as a safety budget so future edits to the block message (e.g. adding
   # one or two lines) do not silently break this check. If the block message
   # grows past ~26 lines, bump this number — but more importantly, ask whether
   # the message is still actionable for the operator at that length.
-  if grep -A28 'RULE violated' "$HOOK" | grep -qE '^exit 1$'; then
-    ok "block path exits 1 (denies the tool call)"
+  if grep -A28 'RULE violated' "$HOOK" | grep -qE '^exit 2$'; then
+    ok "block path exits 2 (denies the tool call)"
   else
-    miss "block path must exit 1 to deny the tool call"
+    miss "block path must exit 2 to deny the tool call"
   fi
 fi
 

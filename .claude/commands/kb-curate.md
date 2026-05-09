@@ -1,24 +1,14 @@
-Run the `kb-curate` skill (`skills/kb-curate/SKILL.md`) with the operator-supplied scope.
+Promote captured L1 journal bullets to curated L2/L3 decisions/gotchas/playbooks/glossary entries in the operator's Obsidian vault. Supports 4 invocation modes (PR-merge via GitHub Action, manual slash, weekly cron, session-end), 7-category classification, and hybrid auto-apply control matrix.
 
-Argument syntax: `/kb-curate [--scope session|all-pending|week|since-YYYY-MM-DD] [--feature <branch>]`. Default `--scope all-pending`.
+Usage:
+/kb-curate [--feature <branch> | --scope session|week|all-pending|since-YYYY-MM-DD]
 
 Steps:
+1. Resolve scope from flags and `.claude/kb-config.json` (client/project/vault_root).
+2. Load pending bullets (skip those with `curated_into:` frontmatter).
+3. Delegate to `kb-curator` agent for classification table.
+4. Operator reviews drafts; auto-apply or manual commit to vault.
+5. Write audit trail and update STATUS.md where applicable.
 
-1. Read `.claude/kb-config.json` from the project root. If absent, exit with `kb-curate: this project has no .claude/kb-config.json — run batuta-project-hygiene mode=project-retrofit first`.
-2. Resolve the scope from `$ARGUMENTS`:
-   - `--feature <branch>`: list bullets in `docs/sessions/*.md` whose `branch:` line matches.
-   - `--scope session`: only today's `docs/sessions/<YYYY-MM-DD>-*.md`.
-   - `--scope week`: journals modified in the last 7 days.
-   - `--scope all-pending` (default): every bullet in `docs/sessions/` lacking `curated_into:` frontmatter.
-   - `--since YYYY-MM-DD`: journals modified after the date.
-3. Delegate to `kb-curator` agent via Task with the bullet list. The agent classifies each bullet and writes outputs per the hybrid control matrix.
-4. After kb-curator returns, append `curated_into: [paths]` and `curated_at: <ISO>` sub-bullets to the source journal AND its vault mirror.
-5. `cd <vault_root> && git add . && git commit -m "kb-curate: <scope>, <N> bullets, <M> drafts, <K> auto-applies"`. Do NOT push.
-6. Print summary: drafts pending review (paths), auto-applies committed (hashes), noise count, errors.
-
-Constraints:
-- NEVER auto-apply `decision-*`, `gotcha-update`, or `playbook-candidate` — those land as `.draft` files.
-- Idempotent: re-running on the same scope produces 0 changes.
-- If `vault_root` is unreachable (Drive offline), skip vault mirror and log to `.claude/kb-debug.log`.
-
-See full process in `skills/kb-curate/SKILL.md`. ADR-0011 D2 documents the decision rationale.
+See `skills/kb-curate/SKILL.md` for full pipeline and `agents/kb-curator.md` for the classification agent.
+Companion: `/kb-end-session` triggers this with --scope session.

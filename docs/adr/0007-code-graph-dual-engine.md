@@ -203,3 +203,6 @@ Specifically for v3.1:
 - [`docs/adr/0006-trust-native-delegation.md`](0006-trust-native-delegation.md) — kill-switch scope; this ADR honors the same boundary
 - [`docs/plans/active/2026-04-29-code-graph-dual-engine.md`](../plans/active/2026-04-29-code-graph-dual-engine.md) — the slice plan
 - [`hooks/delegation-guard.sh`](../../hooks/delegation-guard.sh) — kill-switch enforcement (unchanged by this slice)
+
+## Amendment — v4.8 WP1 baseline (2026-05-08)
+Skill, rule, and slash command stubs fully removed (code-graph deprecation complete). Test 07-code-graph-skill-shape.sh updated to PASS on absence (removal expected). No stubs restored; historical record preserved in this ADR. See final audit report and PROJECT_STATUS.

@@ -18,6 +18,12 @@ Opus runs a `gh` command, a multi-file search, or a direct `Edit` on client proj
 it consumes budget on work a Sonnet or Haiku subagent does equally well at a fraction of the
 cost. This rule makes delegation the default, not an option.
 
+## Model tiers (expertise vs computing cost)
+
+- **Low tier (Haiku)**: Low expertise, lowest cost. Mechanical changes only (≤3 files, no new control flow, no tests, no async, no error handling). Examples: renames, CSS/string updates, config flips, fixture-only test additions.
+- **Mid tier (Sonnet)**: Balanced expertise/cost. Standard implementation work (control flow, tests with assertions, integrations, async, multi-module refactors).
+- **High tier (Opus)**: Highest expertise and cost. Reserved exclusively for main orchestration, architectural synthesis, intent grilling, and plugin meta-work. **Never** used for direct client-code `Edit`/`Write`/`Bash`.
+
 ## Inviolable rules
 
 1. Main Opus MUST NOT execute lookup or research operations (`gh repo view`, `gh api`,

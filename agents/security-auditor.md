@@ -32,6 +32,17 @@ This audit applies whether the diff was produced by the main agent or by another
 
 Do NOT scan files at HEAD for theoretical vulnerabilities. Do NOT invent findings. The pre-flight defends against the main accidentally firing the chain mid-exploration.
 
+## Living docs check (mandatory)
+Before any security analysis, verify that PRD, SPEC or ADR were updated in this slice:
+```bash
+git diff --staged -- docs/PRD.md docs/SPEC.md docs/adr/
+```
+If no changes under `docs/`, return immediately:
+```
+AUDIT RESULT: BLOCKED — living docs not updated. Run living-docs-maintenance before re-submitting.
+```
+Security findings often affect architecture and constraints; those must be recorded in ADR.
+
 If at least one of the diffs reports changes, continue to the Review Scope below.
 
 ## Review Scope
@@ -48,6 +59,7 @@ If at least one of the diffs reports changes, continue to the Review Scope below
 - Are sessions managed securely (httpOnly, secure, sameSite cookies)?
 - Is authorization checked on every protected endpoint?
 - Can users access resources belonging to other users (IDOR)?
+- In multi-tenant or multi-context code, can a user, job, webhook, queue worker, or adapter access another tenant/client/bank/environment context?
 - Are password reset tokens time-limited and single-use?
 - Is rate limiting applied to authentication endpoints?
 
@@ -70,6 +82,7 @@ If at least one of the diffs reports changes, continue to the Review Scope below
 - Are webhook payloads verified (signature validation)?
 - Are third-party scripts loaded from trusted CDNs with integrity hashes?
 - Are OAuth flows using PKCE and state parameters?
+- Are provider/bank-specific credentials, callbacks, and parsing rules isolated per context instead of shared through globals?
 
 ## Severity Classification
 

@@ -1,5 +1,10 @@
 # PORTABILITY — switching tools mid-feature
 
+**Status:** legacy / out of scope for the current deliverable.
+**Current baseline:** [`BASELINE.md`](BASELINE.md)
+
+This file is retained for emergency handoff history. The active deliverable is the Claude Code plugin, supported as an installed plugin or as a clone repo loaded with `claude --plugin-dir`.
+
 **Audience:** an operator who is running this project in Claude Code and needs to continue work in another AI coding tool (Cursor, Codex CLI, Aider, Gemini CLI, Windsurf, OpenCode, etc.) — typically because Claude Code hit a token budget, or for pair programming, or to use a tool's specific strengths.
 
 This file is honest about what survives the switch and what does not.
@@ -58,7 +63,7 @@ This is slower and weaker than the runtime enforcement in Claude Code. The doc g
 - **Cursor:** use `.cursor/rules/` to load project conventions. The Custom Modes feature can approximate per-agent personas but does not return verdicts to a parent agent.
 - **Aider:** add `read: [CLAUDE.md, docs/SPEC.md, docs/plans/active/]` to `.aider.conf.yml`. The architect/editor split is a weak two-step substitute for the audit chain.
 - **Gemini CLI:** reads `GEMINI.md` natively. Point it at `CLAUDE.md` and `docs/SPEC.md` via include/read directives.
-- **OpenCode:** see [`opencode-setup.md`](opencode-setup.md). Skill auto-routing works; the audit chain does not.
+- **OpenCode:** legacy setup notes are no longer part of this repo's active docs. Skill auto-routing may work as static context; the audit chain does not.
 - **Windsurf:** use `.windsurfrules` to load conventions. Same approach as Cursor.
 
 ## When to switch back to Claude Code

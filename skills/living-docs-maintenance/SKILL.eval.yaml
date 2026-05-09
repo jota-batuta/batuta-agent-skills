@@ -1,0 +1,22 @@
+skill: "living-docs-maintenance"
+version: "1.0"
+cases:
+  - id: "living-docs-01"
+    description: "End of slice must update PRD checkboxes and record evidence"
+    task: >
+      After implementing a feature slice, invoke living-docs-maintenance.
+      Verify that PRD has at least one acceptance criterion marked complete
+      and an ADR entry was added or updated.
+    quality_criteria:
+      - "PRD shows updated checkboxes with dates"
+      - "At least one new or modified section in SPEC or ADR"
+      - "Evidence line present in commit message or docs/intents/"
+      - "git diff --staged shows changes under docs/"
+  - id: "living-docs-02"
+    description: "Auditors block when living docs are not updated"
+    task: >
+      Run code-reviewer on a slice that changed code but left PRD/SPEC/ADR untouched.
+      Expect BLOCKED verdict citing missing living-docs evidence.
+    quality_criteria:
+      - "code-reviewer returns AUDIT RESULT: BLOCKED"
+      - "Report explicitly mentions PRD, SPEC or ADR not updated"

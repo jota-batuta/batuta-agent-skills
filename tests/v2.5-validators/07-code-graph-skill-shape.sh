@@ -1,16 +1,9 @@
 #!/usr/bin/env bash
 # 07-code-graph-skill-shape.sh
-# Validates the code-graph deprecation state introduced in v4.1.
-# (graphify deprecated ADR-0013 in v4.0; skill deprecated + Step 0.5 removed in v4.1.)
-#   (a) SKILL.md frontmatter (name, description, deprecated: true) and ## Replacements
-#       section present; codebase-flow-mapper listed as replacement.
-#   (b) SKILL.md does NOT contain `graphify claude install` as a positive instruction.
-#   (c) SKILL.md references codebase-memory-mcp in historical context (## History).
-#   (d) The integrations rule exists, is marked deprecated, and retains Anti-patterns.
-#   (e) ADR-0007 exists (historical record of the dual-engine era).
-#   (f) Bootstrap scripts exist, are executable, and do NOT write to .claude/settings*.
-#   (g) Slash command exists with frontmatter description.
-# Contract introduced in v2.8; v4.0 removed graphify; v4.1 deprecated the skill.
+# Validates the code-graph deprecation state (v4.1) and full removal (WP1 baseline v4.8).
+# (graphify deprecated ADR-0013 in v4.0; skill deprecated + Step 0.5 removed in v4.1; stubs removed in WP1 of plugin-baseline.)
+# When SKILL/RULE/SLASH missing: treated as PASS (deprecation complete, removal per baseline plan).
+# Otherwise validates deprecated frontmatter etc. Scripts + ADR always checked.
 
 set -uo pipefail
 
@@ -32,9 +25,9 @@ ok()   { echo "  OK   $1"; }
 miss() { echo "  MISS $1"; failed=1; }
 drift(){ echo "  DRIFT $1"; failed=1; }
 
-# --- (a) SKILL.md frontmatter (deprecated state) and ## Replacements section ---
+# --- (a) SKILL.md: if removed (post-WP1 baseline), PASS as deprecation complete; else validate deprecated state ---
 if [[ ! -f "$SKILL" ]]; then
-  miss "skills/code-graph/SKILL.md missing"
+  ok "skills/code-graph/SKILL.md removed (WP1 baseline; deprecation complete per ADR-0007/0013)"
 else
   grep -qE '^name: code-graph$'               "$SKILL" && ok "SKILL.md frontmatter name: code-graph"             || miss "SKILL.md frontmatter name: code-graph"
   grep -qE '^description: '                   "$SKILL" && ok "SKILL.md frontmatter description present"          || miss "SKILL.md frontmatter description present"
@@ -61,9 +54,9 @@ else
     || miss "SKILL.md should reference codebase-memory-mcp for ADR traceability (## History)"
 fi
 
-# --- (d) integrations rule (deprecated in v4.1, preserved for historical reference) ---
+# --- (d) integrations rule: if removed (post-WP1), PASS; else validate deprecated state ---
 if [[ ! -f "$RULE" ]]; then
-  miss "rules/integrations/code-graph-usage.md missing"
+  ok "rules/integrations/code-graph-usage.md removed (WP1 baseline; deprecation complete)"
 else
   grep -qE '^title: '                  "$RULE" && ok "rule frontmatter title"                      || miss "rule frontmatter title"
   grep -qE '^applies-to: '             "$RULE" && ok "rule frontmatter applies-to"                 || miss "rule frontmatter applies-to"
@@ -166,9 +159,9 @@ else
   [[ -x "$CHECK" ]] && ok "check-code-graph-engines.sh is executable" || miss "check-code-graph-engines.sh not executable"
 fi
 
-# --- (g) slash command ---
+# --- (g) slash command: if removed (post-WP1), PASS; else validate ---
 if [[ ! -f "$SLASH" ]]; then
-  miss ".claude/commands/code-graph.md missing"
+  ok ".claude/commands/code-graph.md removed (WP1 baseline; deprecation complete)"
 else
   grep -qE '^description: ' "$SLASH" && ok "slash frontmatter description present" || miss "slash frontmatter description"
   # Slash must also NOT positively reference graphify claude install

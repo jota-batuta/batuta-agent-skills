@@ -68,6 +68,9 @@ Conventions:
 - [`research-first-citations.md`](core/research-first-citations.md) — every external import requires a `// Source:` citation comment
 - [`secrets-and-pii.md`](core/secrets-and-pii.md) — secrets and PII handling boundaries
 - [`code-style.md`](core/code-style.md) — universal code style conventions
+- [`no-hardcoded-magic.md`](core/no-hardcoded-magic.md) — varying values live in config, not core logic
+- [`tenant-ready-design.md`](core/tenant-ready-design.md) — multi-context behavior starts with profiles, adapters, rules, and fixtures
+- [`model-routing.md`](core/model-routing.md) — delegation and model routing invariants
 
 ### `stack/` — Stack-specific patterns
 

@@ -114,7 +114,7 @@ if [[ "$tool_name" == "Bash" ]]; then
   cat >&2 <<EOF
 RULE violated (intent-capture gate, v4.5): cannot execute Bash without a confirmed intent.
 
-No marker found at $marker_dir/.intent-and-routing-confirmed-* (or legacy .intent-confirmed-*) — the gate applies to ALL Bash tool calls (gate-all-Bash, no allow-list).
+No marker found at $marker_dir/.intent-and-routing-confirmed-* (or legacy .intent-confirmed-*) — the gate applies to non-fast-path Bash tool calls; simple read-only commands are allowed by the conservative fast-path.
 
 Required workflow before any Bash tool call:
 
@@ -133,7 +133,7 @@ To bypass for legitimate quick fixes, restart Claude Code with:
 
 Rule: rules/core/intent-capture-required.md
 EOF
-  exit 1
+  exit 2
 fi
 
 # ============================================================================
@@ -230,4 +230,4 @@ To bypass for legitimate quick fixes, restart Claude Code with:
 
 Rule: rules/core/intent-capture-required.md
 EOF
-exit 1
+exit 2

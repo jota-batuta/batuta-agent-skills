@@ -23,12 +23,23 @@
 
      Step 2: Uncomment the @-import lines for rules that apply to this project. -->
 
-# @.claude/rules/research-first-citations.md
 # @.claude/rules/secrets-and-pii.md
 # @.claude/rules/code-style.md
+# @.claude/rules/intent-capture-required.md
+# @.claude/rules/tenant-ready-design.md
+# @.claude/rules/no-hardcoded-magic.md
+# @.claude/rules/model-routing.md
 
 <!-- Import only what applies. Unused rules cost context tokens without benefit.
      See rules/README.md for the full index as new rules are added. -->
+
+## Living docs (PRD/SPEC/ADR) are alive
+
+Before closing any slice:
+1. Re-read the relevant sections of PRD, SPEC, and the latest ADR.
+2. Update PRD checkboxes and "as-built" notes in SPEC.
+3. Record any new trade-off in an ADR.
+4. The three auditors will BLOCK if no visible update to at least one living doc in the current slice diff.
 
 ## Exceptions to imported rules
 

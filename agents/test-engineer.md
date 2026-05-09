@@ -35,6 +35,17 @@ Do NOT write tests against unchanged code. Do NOT invent coverage gaps. The pre-
 
 If at least one of the diffs reports changes, continue to the Approach below.
 
+## Living docs check (mandatory)
+Before writing any test, verify that PRD, SPEC or ADR were updated in this slice:
+```bash
+git diff --staged -- docs/PRD.md docs/SPEC.md docs/adr/
+```
+If no changes under `docs/`, return immediately:
+```
+AUDIT RESULT: BLOCKED — living docs not updated. Run living-docs-maintenance before re-submitting.
+```
+PRD is the implementation sheet; tests must align with updated acceptance criteria.
+
 ## Approach
 
 ### 1. Analyze Before Writing
@@ -83,6 +94,7 @@ For every function or component:
 | Boundary values | Min, max, zero, negative |
 | Error paths | Invalid input, network failure, timeout |
 | Concurrency | Rapid repeated calls, out-of-order responses |
+| Context variation | At least two tenant/client/bank/environment/provider/format/rule fixtures when behavior varies |
 
 ## Output Format
 
@@ -98,6 +110,9 @@ When analyzing test coverage:
 ### Recommended Tests
 1. **[Test name]** — [What it verifies, why it matters]
 2. **[Test name]** — [What it verifies, why it matters]
+
+### Context Coverage
+- [yes/no/not applicable] At least two representative contexts covered when behavior varies by tenant/client/bank/environment/provider/format/rule.
 
 ### Priority
 - Critical: [Tests that catch potential data loss or security issues]

@@ -1,24 +1,33 @@
 # Batuta Agent Skills
 
-A Claude Code plugin that gives AI coding agents structured engineering workflows, automated quality gates, and durable project memory. Forked from [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills).
+A Claude Code plugin for building multi-tenant, AI-first software with structured workflows, runtime enforcement, audit gates, and durable Obsidian memory. Forked from [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills).
 
 ## Read first
 
-1. [`docs/PRD.md`](docs/PRD.md) -- vision, problem, success metrics
-2. [`docs/SPEC.md`](docs/SPEC.md) -- architecture (11 layers)
-3. [`CLAUDE.md`](CLAUDE.md) -- conventions and session-handoff protocol
+1. [`docs/BASELINE.md`](docs/BASELINE.md) -- operative Claude Code plugin contract
+2. [`docs/SKILL_MAP.md`](docs/SKILL_MAP.md) -- active skill consolidation map
+3. [`docs/CLAUDE_CODE_DELIVERY.md`](docs/CLAUDE_CODE_DELIVERY.md) -- install, validation, and release gate
+4. [`docs/PRD.md`](docs/PRD.md) -- vision, problem, success metrics
+5. [`docs/SPEC.md`](docs/SPEC.md) -- architecture
+6. [`user-settings/CLAUDE.md`](user-settings/CLAUDE.md) -- global machine-level rules (source of truth for multi-tenant, AI-first, prior-art-first, intent-capture)
 
 ## What the plugin ships
 
-| Component | Count | Location |
-|-----------|-------|----------|
-| Skills (upstream) | 21 | `skills/` |
-| Skills (Batuta) | 20 | `skills/` |
-| Skills (vendored) | 2 | `skills/_vendored/` |
-| Agents | 9 | `agents/` |
-| Rules | 8 | `rules/core/`, `rules/authoring/` |
-| Hooks | 14 | `hooks/` |
-| ADRs | 16 | `docs/adr/` |
+The supported runtime is Claude Code, through one of two paths:
+
+1. Installed plugin.
+2. Clone repo loaded with `claude --plugin-dir /path/to/batuta-agent-skills`.
+
+Both paths should expose the same contract:
+
+| Component | Role |
+|-----------|------|
+| `hooks/` | Claude Code lifecycle enforcement for intent, routing, PR safety, authoring gates, session context, and KB capture |
+| `agents/` | Implementation, testing, review, security, architecture, and KB roles with explicit model routing |
+| `skills/` | Short workflows for planning, building, reviewing, shipping, and operating the KB |
+| `rules/` | Declarative engineering invariants imported by consumer projects |
+| `.claude/commands/` | Operator entry points for repeatable workflows |
+| `docs/` | Baseline, PRD, SPEC, ADRs, active plans, and session journals |
 
 ### Agents
 
@@ -36,18 +45,19 @@ A Claude Code plugin that gives AI coding agents structured engineering workflow
 
 After any implementation, a sequential audit chain runs: `test-engineer` -> `code-reviewer` -> `security-auditor`.
 
-### Key skills (Batuta layer)
+### Key workflows
 
 | Skill | Trigger | What it does |
 |-------|---------|-------------|
 | `batuta-project-hygiene` | Session start / new feature | Bootstraps CLAUDE.md, doc graph, GitHub repo |
 | `intent-capture` | Every operator action request | Captures confirmed intent before execution |
-| `research-first-dev` | Before uncited external imports | Context7 lookup + `// Source:` citation |
+| `research-first-dev` | Before uncited external imports or API use | Prior-art-first lookup + source citation |
 | `batuta-skill-authoring` | Before new SKILL.md | Discovery gate against 91k+ skills.sh catalog |
 | `batuta-agent-authoring` | Before new agent definition | Distinctness check against existing agents |
 | `batuta-rule-authoring` | Before new rule file | Validates format + N=2 admission gate |
-| `code-graph` | Architecture/dependency questions | Queries codebase-memory-mcp graph |
 | `kb-end-session` | End of session | Closes session journal, triggers curation |
+
+`code-graph` was removed in the 6-layer hardening pass. Use `codebase-flow-mapper` for version-controlled architecture diagrams and grep/read for live call-site queries.
 
 ### Rules
 
@@ -59,6 +69,7 @@ Declarative invariants consumer projects import via `@.claude/rules/<rule>.md`. 
 - `core/intent-capture-required.md` -- intent-capture protocol
 - `core/model-routing.md` -- model selection for subagents
 - `core/no-hardcoded-magic.md` -- no magic numbers/strings
+- `core/tenant-ready-design.md` -- multi-context logic via profiles/adapters/rules/fixtures
 - `authoring/skill-authoring-required.md` -- skill authoring gate
 - `authoring/agent-authoring-required.md` -- agent authoring gate
 
@@ -76,22 +87,26 @@ Per-commit auto-capture to an Obsidian vault with four levels: L0 (inbox), L1 (j
 
 ## Install
 
+Installed plugin path:
+
 ```
 /plugin marketplace add jota-batuta/batuta-agent-skills
 /plugin install batuta-agent-skills@batuta-agent-skills
 ```
 
-For local development:
+Clone repo path:
 
 ```bash
 git clone https://github.com/jota-batuta/batuta-agent-skills.git
 claude --plugin-dir /path/to/batuta-agent-skills
 ```
 
-One-time code-graph bootstrap:
+`docs/PORTABILITY.md` is legacy emergency-handoff guidance for other tools. OpenCode, Codex, Cursor, Aider, Gemini CLI, and Windsurf are not active targets for this deliverable.
+
+Validate the full Claude Code plugin contract with:
 
 ```bash
-bash ~/.claude/plugins/marketplaces/batuta-agent-skills/tools/setup-code-graph.sh
+bash tools/validate-plugin.sh
 ```
 
 ## Repo structure
@@ -100,8 +115,9 @@ bash ~/.claude/plugins/marketplaces/batuta-agent-skills/tools/setup-code-graph.s
 batuta-agent-skills/
 ├── agents/              # 9 agent definitions with explicit model: declarations
 ├── docs/
+│   ├── BASELINE.md      # Operative Claude Code plugin contract
 │   ├── PRD.md           # Vision and success metrics
-│   ├── SPEC.md          # Architecture (11 layers)
+│   ├── SPEC.md          # Architecture
 │   ├── adr/             # 16 architecture decision records
 │   ├── plans/           # Active and archived implementation plans
 │   ├── sessions/        # Session journals (handoff protocol)
@@ -116,8 +132,8 @@ batuta-agent-skills/
 ├── skills/              # 41 skills + 2 vendored
 ├── references/          # Checklists (testing, security, performance, a11y)
 ├── tests/               # Static validators + E2E harness
-├── tools/               # Setup scripts (rules import, code-graph bootstrap)
-├── CLAUDE.md            # Project conventions
+├── tools/               # Setup and validation helpers
+├── user-settings/       # Global machine-level rules (source of truth)
 └── ATTRIBUTION.md       # Upstream and vendored source credits
 ```
 
