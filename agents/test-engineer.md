@@ -35,6 +35,17 @@ Do NOT write tests against unchanged code. Do NOT invent coverage gaps. The pre-
 
 If at least one of the diffs reports changes, continue to the Approach below.
 
+## Living docs check (mandatory)
+Before writing any test, verify that PRD, SPEC or ADR were updated in this slice:
+```bash
+git diff --staged -- docs/PRD.md docs/SPEC.md docs/adr/
+```
+If no changes under `docs/`, return immediately:
+```
+AUDIT RESULT: BLOCKED — living docs not updated. Run living-docs-maintenance before re-submitting.
+```
+PRD is the implementation sheet; tests must align with updated acceptance criteria.
+
 ## Approach
 
 ### 1. Analyze Before Writing

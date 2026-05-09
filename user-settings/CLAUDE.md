@@ -74,6 +74,12 @@ Never delegate to Opus subagents (defeats cost). Subagents inherit confirmed int
 
 After any staged diff, the audit chain runs unconditionally: `test-engineer` → `code-reviewer` → `security-auditor`. Each step reads `git diff`; NOT-APPLICABLE returns immediately on a clean tree.
 
+**Living docs (PRD/SPEC/ADR) are mandatory and alive.** Before closing any slice:
+1. Re-read the relevant sections of PRD (acceptance criteria), SPEC (architecture), and the latest ADR.
+2. Update PRD checkboxes and "as-built" notes in SPEC.
+3. Record any new trade-off or rejected alternative in an ADR (create or append).
+4. The three auditors will BLOCK if no visible update to at least one living doc in the current slice diff.
+
 After exiting plan mode, run `/save-plan <slug>` so the plan persists at `<project>/docs/plans/active/<YYYY-MM-DD>-<slug>.md`.
 
 ## Project hygiene (auto)

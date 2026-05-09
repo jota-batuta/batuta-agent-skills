@@ -34,6 +34,17 @@ Do NOT invent findings. Do NOT review files at HEAD speculatively. The pre-fligh
 
 If at least one of the diffs reports changes, continue to the Review Framework below.
 
+## Living docs check (mandatory)
+Before any dimension review, verify that PRD, SPEC or ADR were updated in this slice:
+```bash
+git diff --staged -- docs/PRD.md docs/SPEC.md docs/adr/
+```
+If no changes under `docs/`, return immediately:
+```
+AUDIT RESULT: BLOCKED — living docs not updated. Run living-docs-maintenance before re-submitting.
+```
+This gate is non-negotiable. PRD/SPEC/ADR are living documents.
+
 ## Review Framework
 
 Evaluate every change across these five dimensions:

@@ -1,6 +1,6 @@
 [GOAL]: Ship a complete Claude Code plugin baseline for Batuta agent skills.
 
-[CURRENT STATE]: Autopilot plan completed. Claude Code-only baseline, skill map, prior-art-first workflow, tenant-ready rule, validator alignment, delivery docs, validation script, changelog, and version 4.8.0 are implemented. Full plugin validation passes.
+[CURRENT STATE]: Hardening pass complete on this branch. WP1 (code-graph removal), WP2 (hooks analysis), WP3 (3-tier Low/Mid/High routing), WP4 (living-docs-maintenance skill + CLAUDE.md + 3 auditors hardened) done. WP5 deferred. All changes staged. Ready for commit.
 
 [NEXT ACTIONS]: Run final audit chain on the complete diff, then prepare a conventional commit if requested by the operator.
 
