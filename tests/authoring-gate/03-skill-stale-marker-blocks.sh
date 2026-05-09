@@ -9,7 +9,7 @@ write_stale_marker "skill"
 target="$PLUGIN_ROOT/skills/new-skill/SKILL.md"
 out=$(run_hook "pre-write-skill-gate.sh" "$target") || true
 echo "03-skill-stale-marker-blocks: $out"
-if echo "$out" | grep -q 'EXIT=1' && echo "$out" | grep -q 'RULE violated'; then
+if echo "$out" | grep -q 'EXIT=2' && echo "$out" | grep -q 'RULE violated'; then
   echo "PASS: 03-skill-stale-marker-blocks"
   exit 0
 fi

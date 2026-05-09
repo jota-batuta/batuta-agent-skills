@@ -1,178 +1,75 @@
 ---
 name: using-agent-skills
-description: Discovers and invokes agent skills. Use when starting a session or when you need to discover which skill applies to the current task. This is the meta-skill that governs how all other skills are discovered and invoked.
+description: Routes work to the smallest applicable Batuta skill. Use at session start, before concrete work, or when choosing between planning, build, review, delivery, and KB workflows.
 ---
 
 # Using Agent Skills
 
 ## Overview
 
-Agent Skills is a collection of engineering workflow skills organized by development phase. Each skill encodes a specific process that senior engineers follow. This meta-skill helps you discover and apply the right skill for your current task.
+This is the router. Its job is to pick the smallest workflow that protects the
+slice without flooding the context window. Keep the active skill short; detailed
+routing examples live in `references/using-agent-skills-longform.md` and the
+operational map lives in `docs/SKILL_MAP.md`.
 
-## Skill Discovery
+## When to Use
 
-When a task arrives, identify the development phase and apply the corresponding skill:
+- At session start after reading `CLAUDE.md`, `PROJECT_STATUS.md`, and the
+  active plan.
+- Before executing any concrete task, command, edit, or delegation.
+- When a task changes phase: idea, spec, plan, build, verify, review, ship, KB.
+- When the model is about to invent a process instead of invoking one already
+  present in this repo.
 
-```
-Task arrives
-    │
-    ├── Vague idea/need refinement? ──→ idea-refine
-    ├── New project/feature/change? ──→ spec-driven-development
-    ├── Have a spec, need tasks? ──────→ planning-and-task-breakdown
-    ├── Slice needs domain expertise   ──→ agent-architect
-    │   not covered by base agents?       (creates project-local specialist
-    │                                      on demand, discovery-first; see
-    │                                      rules/core/model-routing.md)
-    ├── Implementing code? ────────────→ incremental-implementation
-    │   ├── UI work? ─────────────────→ frontend-ui-engineering
-    │   ├── API work? ────────────────→ api-and-interface-design
-    │   ├── Need better context? ─────→ context-engineering
-    │   └── Need doc-verified code? ───→ source-driven-development
-    ├── Writing/running tests? ────────→ test-driven-development
-    │   └── Browser-based? ───────────→ browser-testing-with-devtools
-    ├── Something broke? ──────────────→ debugging-and-error-recovery
-    ├── Reviewing code? ───────────────→ code-review-and-quality
-    │   ├── Security concerns? ───────→ security-and-hardening
-    │   └── Performance concerns? ────→ performance-optimization
-    ├── Committing/branching? ─────────→ git-workflow-and-versioning
-    ├── CI/CD pipeline work? ──────────→ ci-cd-and-automation
-    ├── Writing docs/ADRs? ───────────→ documentation-and-adrs
-    └── Deploying/launching? ─────────→ shipping-and-launch
-```
+## Process
 
-## Core Operating Behaviors
+1. **Classify the turn.** Read-only questions can be answered directly. Concrete
+   action routes first through `intent-capture`.
+2. **Pick one primary workflow.** Prefer the narrowest skill that owns the next
+   decision, not the whole project.
+3. **Layer only necessary support skills.** Examples: `context-engineering`
+   before edits, `research-first-dev` before new library/API calls,
+   `test-driven-development` before behavior changes, `code-review-and-quality`
+   before merge.
+4. **Escalate to agents only when useful.** Use base agents for implementation,
+   tests, review, and security. Use `agent-architect` only when domain expertise
+   is missing from base agents.
+5. **Verify and hand off.** Every routed workflow ends with evidence: passing
+   checks, explicit NOT-APPLICABLE, or a BLOCKER.
 
-These behaviors apply at all times, across all skills. They are non-negotiable.
+## Routing Table
 
-### 1. Surface Assumptions
+| Need | Primary skill |
+|---|---|
+| Confirm concrete work | `intent-capture` |
+| Load focused repo context | `context-engineering` |
+| Existing solution or current API needed | `research-first-dev` |
+| Clarify vague idea | `idea-refine` |
+| Write requirements/spec | `spec-driven-development` |
+| Break work into slices | `planning-and-task-breakdown` |
+| Build a slice | `incremental-implementation` |
+| UI or API contract | `frontend-ui-engineering`, `api-and-interface-design` |
+| Bug/root cause | `debugging-and-error-recovery` |
+| Tests or browser proof | `test-driven-development`, `browser-testing-with-devtools` |
+| Review/quality/security/perf | `code-review-and-quality`, `security-and-hardening`, `performance-optimization` |
+| Git/PR/release | `git-workflow-and-versioning`, `slice-open`, `slice-close`, `pr-prep` |
+| Docs/ADR/KB | `documentation-and-adrs`, `batuta-kb-vault`, `kb-curate`, `kb-backfill` |
+| New skill/agent/rule | `batuta-skill-authoring`, `batuta-agent-authoring`, `batuta-rule-authoring` |
 
-Before implementing anything non-trivial, explicitly state your assumptions:
+## Non-Negotiables
 
-```
-ASSUMPTIONS I'M MAKING:
-1. [assumption about requirements]
-2. [assumption about architecture]
-3. [assumption about scope]
-→ Correct me now or I'll proceed with these.
-```
+- Do not skip a MUST-trigger skill from `CLAUDE.md`.
+- Do not load long reference material unless the short skill points to it and the
+  current task needs it.
+- Do not invent a new skill when an existing skill covers more than 70% of the
+  workflow.
+- Do not dispatch a subagent without an approved intent/routing marker in Claude
+  Code.
 
-Don't silently fill in ambiguous requirements. The most common failure mode is making wrong assumptions and running with them unchecked. Surface uncertainty early — it's cheaper than rework.
+## Verification
 
-### 2. Manage Confusion Actively
-
-When you encounter inconsistencies, conflicting requirements, or unclear specifications:
-
-1. **STOP.** Do not proceed with a guess.
-2. Name the specific confusion.
-3. Present the tradeoff or ask the clarifying question.
-4. Wait for resolution before continuing.
-
-**Bad:** Silently picking one interpretation and hoping it's right.
-**Good:** "I see X in the spec but Y in the existing code. Which takes precedence?"
-
-### 3. Push Back When Warranted
-
-You are not a yes-machine. When an approach has clear problems:
-
-- Point out the issue directly
-- Explain the concrete downside (quantify when possible — "this adds ~200ms latency" not "this might be slower")
-- Propose an alternative
-- Accept the human's decision if they override with full information
-
-Sycophancy is a failure mode. "Of course!" followed by implementing a bad idea helps no one. Honest technical disagreement is more valuable than false agreement.
-
-### 4. Enforce Simplicity
-
-Your natural tendency is to overcomplicate. Actively resist it.
-
-Before finishing any implementation, ask:
-- Can this be done in fewer lines?
-- Are these abstractions earning their complexity?
-- Would a staff engineer look at this and say "why didn't you just..."?
-
-If you build 1000 lines and 100 would suffice, you have failed. Prefer the boring, obvious solution. Cleverness is expensive.
-
-### 5. Maintain Scope Discipline
-
-Touch only what you're asked to touch.
-
-Do NOT:
-- Remove comments you don't understand
-- "Clean up" code orthogonal to the task
-- Refactor adjacent systems as a side effect
-- Delete code that seems unused without explicit approval
-- Add features not in the spec because they "seem useful"
-
-Your job is surgical precision, not unsolicited renovation.
-
-### 6. Verify, Don't Assume
-
-Every skill includes a verification step. A task is not complete until verification passes. "Seems right" is never sufficient — there must be evidence (passing tests, build output, runtime data).
-
-## Failure Modes to Avoid
-
-These are the subtle errors that look like productivity but create problems:
-
-1. Making wrong assumptions without checking
-2. Not managing your own confusion — plowing ahead when lost
-3. Not surfacing inconsistencies you notice
-4. Not presenting tradeoffs on non-obvious decisions
-5. Being sycophantic ("Of course!") to approaches with clear problems
-6. Overcomplicating code and APIs
-7. Modifying code or comments orthogonal to the task
-8. Removing things you don't fully understand
-9. Building without a spec because "it's obvious"
-10. Skipping verification because "it looks right"
-
-## Skill Rules
-
-1. **Check for an applicable skill before starting work.** Skills encode processes that prevent common mistakes.
-
-2. **Skills are workflows, not suggestions.** Follow the steps in order. Don't skip verification steps.
-
-3. **Multiple skills can apply.** A feature implementation might involve `idea-refine` → `spec-driven-development` → `planning-and-task-breakdown` → `incremental-implementation` → `test-driven-development` → `code-review-and-quality` → `shipping-and-launch` in sequence.
-
-4. **When in doubt, start with a spec.** If the task is non-trivial and there's no spec, begin with `spec-driven-development`.
-
-## Lifecycle Sequence
-
-For a complete feature, the typical skill sequence is:
-
-```
-1. idea-refine                 → Refine vague ideas
-2. spec-driven-development     → Define what we're building
-3. planning-and-task-breakdown → Break into verifiable chunks
-4. context-engineering         → Load the right context
-5. source-driven-development   → Verify against official docs
-6. incremental-implementation  → Build slice by slice
-7. test-driven-development     → Prove each slice works
-8. code-review-and-quality     → Review before merge
-9. git-workflow-and-versioning → Clean commit history
-10. documentation-and-adrs     → Document decisions
-11. shipping-and-launch        → Deploy safely
-```
-
-Not every task needs every skill. A bug fix might only need: `debugging-and-error-recovery` → `test-driven-development` → `code-review-and-quality`.
-
-## Quick Reference
-
-| Phase | Skill | One-Line Summary |
-|-------|-------|-----------------|
-| Define | idea-refine | Refine ideas through structured divergent and convergent thinking |
-| Define | spec-driven-development | Requirements and acceptance criteria before code |
-| Plan | planning-and-task-breakdown | Decompose into small, verifiable tasks |
-| Build | incremental-implementation | Thin vertical slices, test each before expanding |
-| Build | source-driven-development | Verify against official docs before implementing |
-| Build | context-engineering | Right context at the right time |
-| Build | frontend-ui-engineering | Production-quality UI with accessibility |
-| Build | api-and-interface-design | Stable interfaces with clear contracts |
-| Verify | test-driven-development | Failing test first, then make it pass |
-| Verify | browser-testing-with-devtools | Chrome DevTools MCP for runtime verification |
-| Verify | debugging-and-error-recovery | Reproduce → localize → fix → guard |
-| Review | code-review-and-quality | Five-axis review with quality gates |
-| Review | security-and-hardening | OWASP prevention, input validation, least privilege |
-| Review | performance-optimization | Measure first, optimize only what matters |
-| Ship | git-workflow-and-versioning | Atomic commits, clean history |
-| Ship | ci-cd-and-automation | Automated quality gates on every change |
-| Ship | documentation-and-adrs | Document the why, not just the what |
-| Ship | shipping-and-launch | Pre-launch checklist, monitoring, rollback plan |
+- The selected skill name and reason are clear in the working notes or subagent
+  prompt.
+- Any skipped candidate skill has an explicit reason: read-only, not in scope, or
+  delegated to another mandatory skill.
+- The final response reports the checks that prove the routed workflow completed.

@@ -1,10 +1,10 @@
 # SPEC — batuta-agent-skills
 
 **Status:** living document
-**Last reviewed:** 2026-05-04 (v4.0)
-**Companion documents:** [`PRD.md`](PRD.md) (why), [`adr/`](adr/) (per-decision rationale), [`usage/`](usage/) (operator recipes — upgrade, code-graph, consumer-projects, ci), feature-scoped specs in `docs/<feature>.md` and `skills/<skill>/SKILL.md` (how each module works)
+**Last reviewed:** 2026-05-08 (baseline slice)
+**Companion documents:** [`BASELINE.md`](BASELINE.md) (operative Claude Code plugin contract), [`PRD.md`](PRD.md) (why), [`adr/`](adr/) (per-decision rationale), [`usage/`](usage/) (operator recipes), feature-scoped specs in `docs/<feature>.md` and `skills/<skill>/SKILL.md` (how each module works)
 
-This is a project-wide architecture overview. It describes what the plugin contains, how the pieces fit, and what constraints they enforce. Per-module behavior lives in feature-scoped specs (cross-referenced from each section below).
+This is a project-wide architecture overview. It describes what the plugin contains, how the pieces fit, and what constraints they enforce. The active deliverable is Claude Code only: installed plugin or clone repo loaded with `claude --plugin-dir`. Cross-tool portability docs are legacy/out-of-scope for this deliverable.
 
 ## Component map
 
@@ -13,6 +13,7 @@ batuta-agent-skills/
 ├── CLAUDE.md                  ← project conventions (rules, not architecture)
 ├── docs/
 │   ├── PRD.md                 ← problem, vision, success metrics
+│   ├── BASELINE.md            ← operative Claude Code plugin baseline
 │   ├── SPEC.md                ← this file
 │   ├── adr/                   ← per-decision rationale (numbered, dated, immutable once accepted)
 │   ├── plans/active/          ← exactly one active plan per feature branch
@@ -73,7 +74,7 @@ See [`rules/core/model-routing.md`](../rules/core/model-routing.md) for the mode
 - Path-traversal guard: matches `..` only as a path segment.
 - Defensive Windows backslash normalization for Git Bash compatibility.
 - Fail-soft on missing `jq` (warns to stderr, allows). Operator install hint provided.
-- Output protocol: `exit 0` allows; `exit 1` blocks with stderr message.
+- Output protocol: `exit 0` allows; `exit 2` blocks with stderr message in Claude Code.
 
 **Audit chain as post-edit safeguard**: the primary quality + security enforcement is the post-edit audit chain (Layer 4), not the pre-edit hook. The hook's sole remaining job is preventing the main from writing to kill-switch paths.
 
@@ -95,7 +96,7 @@ The GATE 3 skip allowlist (docs-only slices with no code/config/hooks) and anti-
 
 ## Layer 5 — Documentation graph (this layer)
 
-The doc graph mirrors the four-quadrant model of the industry consensus:
+The active doc entry point is [`BASELINE.md`](BASELINE.md). The rest of the doc graph preserves why, how, and decision history:
 
 | Question | Project-wide | Feature-scoped |
 |---|---|---|
@@ -111,6 +112,8 @@ Plans and session journals augment this:
 - `docs/sessions/<date>-<slug>.md` — session journal with `Context | Decisions | Changes | Next` sections; the `Next` line is the entry point for the next session
 
 See `CLAUDE.md` section "Session-handoff protocol" for how the operator and the main agent interact with these files.
+
+`docs/PORTABILITY.md` is retained as legacy emergency-handoff guidance. It is not an active architecture target.
 
 ## Layer 6 — Engineering invariants (`rules/`)
 
@@ -136,18 +139,15 @@ A static-check test suite that grep-verifies the v2.5+ enforcement contracts (au
 
 This layer is the regression net for the runtime enforcement layers (3 and 4). When an auditor's Step 0 or an implementer's Step 2 gets accidentally edited away during a refactor, validators catch it before merge.
 
-## Layer 8 — Code knowledge graph (v2.8+, single-engine since v4.0)
+## Layer 8 — Code knowledge graph (legacy/deprecated)
 
-A code-graph layer so architecture / onboarding / refactor questions consult a persisted graph instead of re-reading the repo file by file.
+The historical code-graph layer is no longer part of the active plugin baseline. Use `codebase-flow-mapper` for version-controlled architecture diagrams and grep/read for live call-site queries. The files remain for migration history and compatibility until a later consolidation slice removes or aliases them.
 
-- **Engine:** `codebase-memory-mcp` ([github.com/DeusData/codebase-memory-mcp](https://github.com/DeusData/codebase-memory-mcp), v0.6.0). Native Go MCP server, code-only, ~14 MCP tools (`index_repository`, `search_graph`, `trace_call_path`, `get_architecture`, `get_code_snippet`, `query_graph`, `index_status`, ...). Stable on Linux, macOS, and Windows. Pre-v4.0 the plugin shipped graphify as a second engine; deprecated per [ADR-0013](adr/0013-v4.0-distillation.md) — bus factor 1, three blocking Windows install issues, no Batuta project used the multimodal path in production.
-- **Skill:** [`skills/code-graph/SKILL.md`](../skills/code-graph/SKILL.md). Auto-trigger by description matching on architecture / onboarding / refactor prompts. Step 0 reads cached engine state at `~/.claude/code-graph-engines.json` and dispatches to the engine.
-- **Slash:** [`.claude/commands/code-graph.md`](../.claude/commands/code-graph.md). Operator-invoked manual surface. Modes: `--scan`, `--watch`, `--query`.
-- **Bootstrap:** [`tools/setup-code-graph.sh`](../tools/setup-code-graph.sh). Operator-side. Installs `codebase-memory-mcp` (SHA-256-verified GitHub release download; provenance-attested via `gh attestation verify` if available). Idempotent. **Not** chained from `tools/setup-rules.sh --all` (changed in v4.0 — rule import is independent of engine bootstrap).
-- **Audit chain integration (Step 0.5, v3.0+):** `code-reviewer` and `security-auditor` consult the engine after Step 0 (NOT-APPLICABLE) and before the framework review, for blast-radius / attack-surface enumeration. Non-blocking; graceful-degrade to v2.9 behavior when the engine is not available. `test-engineer` is intentionally NOT consulting (scope guard, ADR-0008).
-- **Rule:** *(removed in v4.1 — `rules/integrations/code-graph-usage.md` deprecated with zero consumer adoption)*.
+- **Deprecated skill:** [`skills/code-graph/SKILL.md`](../skills/code-graph/SKILL.md) documents the replacement path.
+- **Deprecated/legacy setup:** [`tools/setup-code-graph.sh`](../tools/setup-code-graph.sh) remains historical tooling, not a required baseline bootstrap.
+- **Historical ADRs:** [`adr/0007-code-graph-dual-engine.md`](adr/0007-code-graph-dual-engine.md), [`adr/0008-audit-chain-code-graph-integration.md`](adr/0008-audit-chain-code-graph-integration.md), and [`adr/0013-v4.0-distillation.md`](adr/0013-v4.0-distillation.md).
 
-See [`adr/0007-code-graph-dual-engine.md`](adr/0007-code-graph-dual-engine.md) for the original dual-engine rationale, [`adr/0008-audit-chain-code-graph-integration.md`](adr/0008-audit-chain-code-graph-integration.md) for Step 0.5, and [`adr/0013-v4.0-distillation.md`](adr/0013-v4.0-distillation.md) for the v4.0 single-engine simplification. Operator recipe: [`usage/code-graph.md`](usage/code-graph.md). Debug recipe: [`usage/debugging-with-code-graph.md`](usage/debugging-with-code-graph.md).
+This slice does not run the full skill consolidation; it only marks the current architecture boundary.
 
 ## Layer 9 — Supply-chain hardening (v2.9 + v3.1 + v3.4)
 
@@ -208,8 +208,8 @@ The plugin ships skills organized by development phase. Each skill has a `SKILL.
 | Meta (Batuta-specific) | `batuta-project-hygiene`, `batuta-skill-authoring`, `batuta-agent-authoring`, `batuta-rule-authoring`, `research-first-dev`, `using-agent-skills` |
 | KB pipeline (Batuta-specific, ADR-0012) | `batuta-kb-vault`, `kb-curate`, `kb-backfill`, `kb-end-session` |
 | Meta / ops (Batuta-specific) | `save-plan`, `batuta-status` |
-| Architecture / refactor (Batuta-specific) | `code-graph` |
-| Removed | ~~`notion-kb-workflow`~~ (deprecated 2026-05-01 per [ADR-0012](adr/0012-obsidian-only-kb-pipeline.md); directory deleted 2026-05-04 per [ADR-0013](adr/0013-v4.0-distillation.md); replaced by `hooks/session-start.sh` + `hooks/post-commit-kb.sh` + `agents/kb-pipeline.md`. SKILL.md preserved in git history.) |
+| Architecture / refactor (Batuta-specific) | `codebase-flow-mapper` for diagrams; grep/read for live call-site queries |
+| Deprecated / removed | ~~`code-graph`~~ (deprecated in v4.1; retained only for history/migration), ~~`notion-kb-workflow`~~ (deprecated 2026-05-01 per [ADR-0012](adr/0012-obsidian-only-kb-pipeline.md); directory deleted 2026-05-04 per [ADR-0013](adr/0013-v4.0-distillation.md); replaced by `hooks/session-start.sh` + `hooks/post-commit-kb.sh` + `agents/kb-pipeline.md`. SKILL.md preserved in git history.) |
 
 Each skill is auto-discoverable via the `using-agent-skills` flowchart. The Batuta-specific meta-skills are mandatory triggers documented in `CLAUDE.md`. The `kb-pipeline` agent (defined in `agents/kb-pipeline.md`, not a skill) is the per-commit dispatch target — it runs Capture / Curate / Write phases against the commit diff and writes to the operator's Obsidian vault.
 
@@ -226,7 +226,7 @@ Each skill is auto-discoverable via the `using-agent-skills` flowchart. The Batu
 
 - Does not redefine `permissions.allow`/`deny`. Those remain the operator's domain.
 - Does not auto-merge PRs. The operator merges manually after review.
-- Does not run on systems without Claude Code 1.x.
+- Does not target non-Claude-Code harnesses for this deliverable.
 - Does not provide UI surfacing of metrics. Metrics are observed via Anthropic billing + transcript inspection.
 
 For the historical and motivational backing of these constraints, see [`PRD.md`](PRD.md). For each major decision and the alternatives rejected, see [`adr/`](adr/).

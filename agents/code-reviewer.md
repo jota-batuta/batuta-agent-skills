@@ -49,7 +49,7 @@ Evaluate every change across these five dimensions:
 - Are names descriptive and consistent with project conventions?
 - Is the control flow straightforward (no deeply nested logic)?
 - Is the code well-organized (related code grouped, clear boundaries)?
-- **Anti-hardcoding check**: grep the diff for numeric literals > 3 digits, ALL_CAPS strings not declared as a constant, absolute paths, and embedded dates. For each hit, verify whether it should be a parameter or config value. If yes, raise as a Critical finding with citation to `rules/no-hardcoded-magic.md`.
+- **Anti-hardcoding check**: grep the diff for numeric literals > 3 digits, ALL_CAPS strings not declared as a constant, absolute paths, embedded dates, tenant names, bank names, provider names, environment names, and format identifiers. For each hit, verify whether it belongs in a profile, adapter, ruleset, fixture, or config value. If yes, raise as a Critical finding with citation to `rules/core/no-hardcoded-magic.md` or `rules/core/tenant-ready-design.md`.
 
 ### 3. Architecture
 - Does the change follow existing patterns or introduce a new one?
@@ -57,6 +57,7 @@ Evaluate every change across these five dimensions:
 - Are module boundaries maintained? Any circular dependencies?
 - Is the abstraction level appropriate (not over-engineered, not too coupled)?
 - Are dependencies flowing in the right direction?
+- Does behavior that varies by tenant, client, bank, environment, provider, format, rule, or period live outside core logic behind explicit context boundaries?
 
 ### 4. Security
 - Is user input validated and sanitized at system boundaries?

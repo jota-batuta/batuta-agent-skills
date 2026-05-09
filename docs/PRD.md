@@ -1,8 +1,10 @@
 # PRD — batuta-agent-skills
 
 **Status:** living document
-**Last reviewed:** 2026-05-04 (v4.0)
+**Last reviewed:** 2026-05-08 (baseline slice)
 **Owner:** jota-batuta (Batuta)
+
+**Current baseline:** [`BASELINE.md`](BASELINE.md) is the operative contract for the Claude Code plugin deliverable. This PRD preserves the why; the baseline defines the active scope.
 
 ## Problem
 
@@ -19,6 +21,8 @@ These are not workflow inconveniences. They translate to real business cost: a s
 **A plugin that turns any Claude Code session into a delegation-only architectural seat.**
 
 The operator talks to Opus about architecture. Opus talks to Sonnet, Haiku, and project-local domain specialists about implementation. A runtime hook prevents the main from sliding back into hands-on coding. A persistent doc graph (PRD, SPEC, ADRs, plans, session journals) preserves context across sessions and across phases within a session.
+
+The plugin is built for multi-tenant, AI-first software work from day zero. Client, bank, environment, format, provider, and rule variation are modeled as context boundaries, not as hardcoded local exceptions.
 
 ## Users
 
@@ -41,7 +45,7 @@ Tracked per-month after plugin install in a project that adopts the convention:
 
 - **Replacing Claude Code's permissions system.** The plugin uses the existing PreToolUse hook surface; it does not redefine `permissions.allow`/`deny`.
 - **Forcing Spanish-language artifacts.** Conventions follow operator's `~/.claude/CLAUDE.md` (English artifacts, Spanish conversation).
-- **Cross-tool portability.** Designed for Claude Code 1.x. Cursor/Aider/Codex compatibility is incidental, not a goal.
+- **Cross-tool portability.** Out of scope for this deliverable. `docs/PORTABILITY.md` remains legacy emergency-handoff guidance, not an active product goal or non-goal to optimize against.
 - **Replacing the operator's judgment on PRs.** The plugin generates PRs but never merges; operator review remains the merge gate.
 - **Generic Anthropic engineering best-practices.** This is opinionated for Batuta's workflow (multi-client, regulated domains in CO).
 
@@ -51,12 +55,12 @@ Tracked per-month after plugin install in a project that adopts the convention:
 - All artifacts in English (operator preference for engineering deliverables).
 - No `Co-Authored-By: Claude` in commits or PRs.
 - Compatibility target: Claude Code 1.x (specifically validated on 2.1.119 as of 2026-04-26).
-- Windows + Git Bash is a supported development environment (path handling must work on both POSIX and Windows-shaped paths).
+- Claude Code is the only runtime target. Windows + Git Bash path handling remains a developer-environment constraint where existing hooks/scripts already support it, not a cross-harness compatibility goal.
 - Backward compatibility with the upstream `addyosmani/agent-skills` patterns where they don't conflict; divergence is documented in ADRs.
 
 ## Architecture summary
 
-For the technical architecture, see [`SPEC.md`](SPEC.md). For decision rationale on individual choices, see [`adr/`](adr/).
+For the operative plugin contract, see [`BASELINE.md`](BASELINE.md). For the technical architecture, see [`SPEC.md`](SPEC.md). For decision rationale on individual choices, see [`adr/`](adr/).
 
 In one paragraph: the plugin ships five base agents (`implementer`, `implementer-haiku`, `code-reviewer`, `test-engineer`, `security-auditor`) with explicit `model:` declarations, a meta-agent (`agent-architect`) that creates project-local domain specialists on demand, a plugin-level PreToolUse hook (`delegation-guard.sh`) that enforces kill-switches (secrets and plugin self-disable surfaces) while trusting Claude's native delegation judgment for all other paths, a sequential audit chain (test → review → security) that runs post-edit on any staged diff regardless of authorship, and a documentation convention (PRD + SPEC + ADRs + active plans + session journals) that persists context across sessions.
 

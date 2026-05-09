@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 12: Write to a new feature CLAUDE.md (subdir) without any marker
-#     should be BLOCKED (exit 1 with "RULE violated").
+#     should be BLOCKED (exit 2 with "RULE violated").
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/_lib.sh"
@@ -16,7 +16,7 @@ target="$PLUGIN_ROOT/src/feature-foo/CLAUDE.md"
 
 out=$(run_hook "pre-write-feature-gate.sh" "$target") || true
 echo "12-feature-no-marker-blocks: $out"
-if echo "$out" | grep -q 'EXIT=1' && echo "$out" | grep -q 'RULE violated'; then
+if echo "$out" | grep -q 'EXIT=2' && echo "$out" | grep -q 'RULE violated'; then
   echo "PASS: 12-feature-no-marker-blocks"
   exit 0
 fi

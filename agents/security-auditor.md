@@ -48,6 +48,7 @@ If at least one of the diffs reports changes, continue to the Review Scope below
 - Are sessions managed securely (httpOnly, secure, sameSite cookies)?
 - Is authorization checked on every protected endpoint?
 - Can users access resources belonging to other users (IDOR)?
+- In multi-tenant or multi-context code, can a user, job, webhook, queue worker, or adapter access another tenant/client/bank/environment context?
 - Are password reset tokens time-limited and single-use?
 - Is rate limiting applied to authentication endpoints?
 
@@ -70,6 +71,7 @@ If at least one of the diffs reports changes, continue to the Review Scope below
 - Are webhook payloads verified (signature validation)?
 - Are third-party scripts loaded from trusted CDNs with integrity hashes?
 - Are OAuth flows using PKCE and state parameters?
+- Are provider/bank-specific credentials, callbacks, and parsing rules isolated per context instead of shared through globals?
 
 ## Severity Classification
 

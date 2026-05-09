@@ -83,6 +83,7 @@ For every function or component:
 | Boundary values | Min, max, zero, negative |
 | Error paths | Invalid input, network failure, timeout |
 | Concurrency | Rapid repeated calls, out-of-order responses |
+| Context variation | At least two tenant/client/bank/environment/provider/format/rule fixtures when behavior varies |
 
 ## Output Format
 
@@ -98,6 +99,9 @@ When analyzing test coverage:
 ### Recommended Tests
 1. **[Test name]** — [What it verifies, why it matters]
 2. **[Test name]** — [What it verifies, why it matters]
+
+### Context Coverage
+- [yes/no/not applicable] At least two representative contexts covered when behavior varies by tenant/client/bank/environment/provider/format/rule.
 
 ### Priority
 - Critical: [Tests that catch potential data loss or security issues]

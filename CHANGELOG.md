@@ -2,6 +2,17 @@
 
 All notable changes to this plugin are listed here.
 
+## [4.8.0] — 2026-05-09
+
+Claude Code-only plugin baseline for building multi-tenant, AI-first software from day zero.
+
+- **Baseline and delivery:** added `docs/BASELINE.md`, `docs/CLAUDE_CODE_DELIVERY.md`, and `tools/validate-plugin.sh` as the operative contract and validation command for installed-plugin and `claude --plugin-dir` usage.
+- **Skills consolidation:** added `docs/SKILL_MAP.md`; shortened hot-path skills (`using-agent-skills`, `context-engineering`, `research-first-dev`, `source-driven-development`) and moved long-form material into `references/`.
+- **Prior-art-first:** rewrote `research-first-dev` and `rules/core/research-first-citations.md` around evidence packs, local KB, mature OSS, official docs, license risk, and source citations.
+- **Tenant-ready design:** added `rules/core/tenant-ready-design.md`; updated implementer, reviewer, tester, and security auditor prompts to enforce profiles/adapters/rules/fixtures and 2+ context coverage.
+- **Hook/test contract:** aligned blocking hook tests to Claude Code `exit 2`, changed the edit branch of `pre-edit-intent-gate.sh` to `exit 2`, restored the deprecated code-graph rule, and made legacy code-graph helper scripts executable.
+- **Validation:** `bash tools/validate-plugin.sh` passes, covering manifest JSON, skill/agent frontmatter, v2.5 validators, intent gate, authoring gate, hook additions, and `git diff --check`.
+
 ## [4.7.0] — 2026-05-08 (this PR)
 
 Read-only Bash fast-path on `pre-edit-intent-gate.sh`. The v4.2 "gate-all-Bash, no allow-list" rule blocked routine exploration (`ls`, `cat`, `git status`, `rg`, `find`) every operator turn — the Bash spawn tax compounded with three other PreToolUse hooks made simple lookups feel sticky. The fast-path lets a curated list of read-only verbs exit 0 immediately while preserving every existing gate behavior for non-read-only commands.

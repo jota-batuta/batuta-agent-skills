@@ -16,7 +16,7 @@ trap 'rm -rf "$PLUGIN_ROOT"' EXIT
 target="$PLUGIN_ROOT/.claude/agents/new-specialist.md"
 out=$(run_hook "pre-write-agent-gate.sh" "$target") || true
 echo "09-agent-project-local-no-origin-check: $out"
-if echo "$out" | grep -q 'EXIT=1' && echo "$out" | grep -q 'RULE violated'; then
+if echo "$out" | grep -q 'EXIT=2' && echo "$out" | grep -q 'RULE violated'; then
   echo "PASS: 09-agent-project-local-no-origin-check"
   exit 0
 fi

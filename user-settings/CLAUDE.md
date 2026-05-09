@@ -104,6 +104,32 @@ The context window is not memory. The Obsidian vault is.
 
 Engineering invariants ship in `batuta-agent-skills/rules/`. A project imports them à la carte from its CLAUDE.md via `@.claude/rules/<rule>.md`. The symlinks are created by `tools/setup-rules.sh` (run once per project, idempotent), point at the plugin install path, and update on `/plugin update`. Add `.claude/rules/` to project `.gitignore` (per-machine, breaks on clones without the plugin).
 
+## Core invariants (required for Batuta multi-tenant AI-first)
+
+These rules are non-negotiable. They MUST be imported in this global `~/.claude/CLAUDE.md` (or via `@user-settings/CLAUDE.md` in the plugin repo) so that Claude Code and all hooks are bound by them on every session. Without these imports, the skills and hooks have no enforcement contract.
+
+Import them explicitly:
+
+```markdown
+@rules/core/tenant-ready-design.md
+@rules/core/no-hardcoded-magic.md
+@rules/core/research-first-citations.md
+@rules/core/intent-capture-required.md
+@rules/core/secrets-and-pii.md
+@rules/core/code-style.md
+@rules/core/model-routing.md
+```
+
+These rules enforce:
+- **Multi-tenant from day zero**: All logic is parameterized by context (tenant, client, bank, environment, format, rule, period). No hard-coded values.
+- **Prior-art-first (research-first)**: Copy before build. Evidence pack required for every external dependency.
+- **Intent capture**: Every action is preceded by explicit intent declaration + operator confirmation. Trivial tier is narrowly defined.
+- **No hardcoding**: Magic strings, tenant names, bank names, formats, credentials — all externalized.
+- **Security & PII**: Never in repo, never in logs, never in client artifacts.
+- **Code style & model routing**: Consistent style + correct model delegation.
+
+The hooks (`pre-edit-intent-gate.sh`, `delegation-guard.sh`, `pre-write-skill-gate.sh`, etc.) and skills (`intent-capture`, `research-first-dev`, `batuta-project-hygiene`, etc.) derive their authority from these imports. If they are absent, the system degrades to generic Claude Code behavior.
+
 ## Boundaries
 
 - Use subagents by specificity, not as fallback. Goal: keep main context under 50% utilization.
