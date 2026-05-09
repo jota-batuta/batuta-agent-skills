@@ -1,0 +1,68 @@
+skill: "idea-refine"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Brainstorming session uses variation lenses and produces Not Doing list"
+    task: >
+      I have an idea for an internal tool that auto-generates weekly status
+      reports from git commits and Jira tickets. Help me refine it.
+    quality_criteria:
+      - "Generates 5-8 idea variations using the defined lenses (inversion, constraint removal, audience shift, combination, simplification, 10x scale, expert lens)"
+      - "Produces a Not Doing list with explicit trade-offs"
+      - "Includes Problem Statement, Recommended Direction, Key Assumptions to Validate, and MVP Scope"
+      - "Pushes back on weak ideas with kindness and specificity — not a yes-machine"
+    anti_criteria:
+      - "Accepts the first idea without exploring variations"
+      - "Produces output without a Not Doing list"
+      - "Skips the variation lenses and jumps to implementation"
+
+  - id: "trigger-02"
+    description: "Codebase context grounds variations in what actually exists"
+    task: >
+      I want to add a caching layer to our API. We already have Redis
+      configured in docker-compose.yml and a utils/cache.ts module. Ideate
+      on the best approach.
+    quality_criteria:
+      - "Scans the codebase for relevant context (docker-compose.yml, utils/cache.ts)"
+      - "Grounds variations in the existing infrastructure — does not ignore what is already there"
+      - "Explores multiple approaches (in-memory, Redis, CDN, hybrid) through the variation lenses"
+    anti_criteria:
+      - "Ignores existing codebase context and ideates in a vacuum"
+      - "Recommends a caching solution without checking what infrastructure already exists"
+
+  - id: "bypass-01"
+    description: "Collapsing to first idea without exploring alternatives is blocked"
+    task: >
+      I want to use Redis for caching. Just tell me how to implement it.
+      I have already decided, no need to explore other options.
+    quality_criteria:
+      - "Pushes back — explores at least the simplification and inversion lenses before accepting"
+      - "Asks whether the operator has considered a simpler alternative (e.g. in-memory cache, HTTP cache headers)"
+      - "Respects the final decision if the operator confirms after seeing alternatives"
+    anti_criteria:
+      - "Immediately implements Redis without exploring any alternatives"
+      - "Skips the variation lenses because the operator said they already decided"
+
+  - id: "edge-01"
+    description: "Already-specific request does not trigger full ideation"
+    task: >
+      Rename the variable `usr` to `user` in src/auth/login.ts line 42.
+    quality_criteria:
+      - "Recognizes this is a specific, concrete change that does not need ideation"
+      - "Performs the rename directly without generating variation lenses or a Not Doing list"
+    anti_criteria:
+      - "Runs the full ideation process for a simple variable rename"
+      - "Generates a Not Doing list for a trivial code change"
+
+  - id: "edge-02"
+    description: "Vague idea gets structured exploration, not immediate rejection"
+    task: >
+      I want to make our onboarding better. Not sure how yet. Ideas?
+    quality_criteria:
+      - "Does not reject the vague idea — engages with it using variation lenses"
+      - "Asks clarifying questions to scope the problem before generating variations"
+      - "Produces a Problem Statement that frames the core problem in one sentence"
+      - "Explores multiple directions (UX flow, automation, documentation, personalization)"
+    anti_criteria:
+      - "Rejects the idea as too vague to work with"
+      - "Picks a single direction without exploring alternatives"

@@ -1,0 +1,50 @@
+skill: "kb-backfill"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Extracting history from a legacy repo should run the 4-phase pipeline"
+    task: >
+      Run /kb-backfill --repo /home/user/legacy-api --scope readme,commits,issues
+      to extract historical knowledge from the legacy-api repo into the vault inbox.
+    quality_criteria:
+      - "Verifies the repo path exists and is a git repo"
+      - "Checks for .claude/kb-config.json with client and project slugs"
+      - "Runs Phase 1 (README + docs/) copying markdown files with backfill frontmatter"
+      - "Runs Phase 2 (commit messages) filtering by heuristic (subject > 30 chars, keyword match)"
+      - "Runs Phase 3 (issues/PRs) via gh if a GitHub remote exists"
+      - "Writes output to _inbox/backfill-<repo-slug>-<date>/ with manifest.yaml"
+      - "Proposes Haiku or Sonnet model based on repo size"
+    anti_criteria:
+      - "Skips Phase 1 claiming READMEs are fine where they are"
+      - "Auto-curates the _inbox output directly to L2 without going through kb-curate"
+      - "Runs Phase 4 (code analysis) without explicit --scope code"
+
+  - id: "bypass-01"
+    description: "Skipping Phase 1 (README/docs) is an anti-rationalization the skill must reject"
+    task: >
+      Run /kb-backfill --repo /home/user/legacy-api --scope commits,issues
+      and skip the README phase because the docs are already in the repo and
+      anyone can read them there.
+    quality_criteria:
+      - "Warns that skipping Phase 1 makes READMEs invisible to cross-project research-first lookups"
+      - "Recommends including readme in the scope for vault discoverability"
+      - "Cites the anti-rationalization table from the skill definition"
+    anti_criteria:
+      - "Silently accepts the reduced scope without warning about Phase 1 omission"
+      - "Agrees that READMEs staying in the repo is sufficient"
+
+  - id: "edge-01"
+    description: "Repo with fewer than 10 commits has minimal meaningful history"
+    task: >
+      Run /kb-backfill --repo /home/user/new-prototype. The repo was created
+      last week and has only 7 commits, all with subjects like "wip", "fix typo",
+      and "initial commit". No issues or PRs exist.
+    quality_criteria:
+      - "Phase 2 filters out all commits (none pass the heuristic: subjects are too short or match noise patterns)"
+      - "Phase 3 produces 0 hits (no issues/PRs exist)"
+      - "Reports a near-empty backfill result and suggests the repo may not need backfill yet"
+      - "Still writes a manifest.yaml even if 0 files were produced (idempotency)"
+    anti_criteria:
+      - "Fabricates knowledge from trivial commit messages like 'wip' or 'fix typo'"
+      - "Skips manifest creation because no files were written"
+      - "Suggests running Phase 4 (code analysis) to compensate for empty results"

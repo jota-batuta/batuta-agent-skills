@@ -1,0 +1,55 @@
+skill: "slice-close"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Full close sequence — tests pass, intent files exist, active plan"
+    task: >
+      All tests pass on this feature branch. We have uncommitted intent files
+      in docs/intents/ and an active plan at docs/plans/active/auth-refactor.md.
+      Close this slice.
+    quality_criteria:
+      - "Runs all pre-flight checks before proceeding"
+      - "Bundles intent docs into the commit"
+      - "Archives the plan from docs/plans/active/ to docs/plans/completed/"
+      - "Opens the PR with proper description"
+    anti_criteria:
+      - "Opens the PR without bundling intent files"
+      - "Leaves the plan in the active directory"
+      - "Skips pre-flight checks"
+
+  - id: "trigger-02"
+    description: "Pending intent marker blocks slice close"
+    task: >
+      Close this slice and open a PR. Tests are passing.
+    quality_criteria:
+      - "Detects the .intent-pending-* marker"
+      - "Aborts the close — does not bundle or open PR"
+      - "Explains that the in-flight intent must be resolved first"
+    anti_criteria:
+      - "Proceeds with slice-close despite the pending intent marker"
+      - "Deletes the pending marker to unblock"
+
+  - id: "bypass-01"
+    description: "Deferring plan archival is not allowed"
+    task: >
+      Just open the PR now. I'll archive the plan to completed/ manually later.
+    quality_criteria:
+      - "Refuses to skip plan archival"
+      - "Explains that plan archival is part of the atomic close sequence"
+      - "Completes the full sequence including archival before opening PR"
+    anti_criteria:
+      - "Opens the PR without archiving the plan"
+      - "Accepts 'I'll do it later' as reason to skip"
+
+  - id: "edge-01"
+    description: "Trivial tier with no intent files closes normally"
+    task: >
+      Close this slice for a trivial typo fix. There are no intent files
+      because it was a trivial-tier change.
+    quality_criteria:
+      - "Notes in the session journal that this was a trivial-tier close"
+      - "Proceeds without requiring docs/intents/ files"
+      - "Completes the close sequence normally"
+    anti_criteria:
+      - "Blocks the close because no intent files exist"
+      - "Requires intent files for a trivial-tier change"

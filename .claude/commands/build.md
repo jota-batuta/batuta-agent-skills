@@ -15,4 +15,4 @@ Pick the next pending task from the plan. For each task:
 7. Commit with a descriptive message
 8. Mark the task complete and move to the next one
 
-If any step fails, follow the agent-skills:debugging-and-error-recovery skill.
+If any step fails, diagnose and fix the root cause before proceeding.

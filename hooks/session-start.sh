@@ -1,8 +1,8 @@
 #!/bin/bash
 # agent-skills session start hook
-# Injects the using-agent-skills meta-skill into every new session, then
-# loads KB context from the operator's Obsidian vault when .claude/kb-config.json
-# is present in the current working directory.
+# Loads KB context from the operator's Obsidian vault when .claude/kb-config.json
+# is present in the current working directory, then writes the session-context
+# marker consumed by pre-session-context-gate.sh.
 #
 # Output: a single JSON object { "priority": "...", "message": "..." } consumed
 # by Claude Code's SessionStart hook protocol.
@@ -13,40 +13,21 @@
 set +e
 trap 'exit 0' ERR
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILLS_DIR="$(dirname "$SCRIPT_DIR")/skills"
-META_SKILL="$SKILLS_DIR/using-agent-skills/SKILL.md"
-CONTEXT_SKILL="$SKILLS_DIR/context-engineering/SKILL.md"
+# ---------------------------------------------------------------------------
+# Source shared config library
+# ---------------------------------------------------------------------------
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
 
 # ---------------------------------------------------------------------------
-# Part 1 — meta-skill content (always injected)
-# ---------------------------------------------------------------------------
-meta_content=""
-if [ -f "$META_SKILL" ]; then
-  meta_content=$(cat "$META_SKILL" 2>/dev/null)
-fi
-if [ -f "$CONTEXT_SKILL" ]; then
-  context_content=$(cat "$CONTEXT_SKILL" 2>/dev/null)
-  if [ -n "$context_content" ]; then
-    meta_content="${meta_content}"$'\n\n---\n\n'"${context_content}"
-  fi
-fi
-
-# ---------------------------------------------------------------------------
-# Part 2 — KB context block (injected only when kb-config.json is present)
+# Part 1 — KB context block (injected only when kb-config.json is present)
 # ---------------------------------------------------------------------------
 kb_block=""
 
 # Resolve repo root so the hook works regardless of cwd within the repo.
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null)"
-config_file="${repo_root}/.claude/kb-config.json"
+config_file="${repo_root}/$(config_path "kb_config")"
 debug_log="${repo_root}/.claude/kb-debug.log"
-
-_log() {
-  # Append a timestamped line to the debug log. Swallows errors so the
-  # log write itself never aborts the hook.
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $1" >> "$debug_log" 2>/dev/null || true
-}
 
 if [[ -z "$repo_root" ]]; then
   # Not inside a git repo — skip KB context silently.
@@ -105,7 +86,7 @@ print("{}|{}|{}|{}".format(
     # ----------------------------------------------------------------
     # Resolve vault_root: project config → ~/.claude/kb-vault.json → $KB_VAULT_ROOT
     # ----------------------------------------------------------------
-    global_vault_file="${HOME}/.claude/kb-vault.json"
+    global_vault_file="${HOME}/$(config_path "kb_vault_global")"
 
     # Detect template/empty values that should not be used as-is.
     vault_root_is_template=false
@@ -182,7 +163,7 @@ print("{}|{}|{}|{}".format(
       fi
 
       # --- Active plan from repo ---
-      active_plan_dir="$repo_root/docs/plans/active"
+      active_plan_dir="$repo_root/$(config_path "plans_active")"
       if [[ -d "$active_plan_dir" ]]; then
         active_plan=$(ls -t "$active_plan_dir"/*.md 2>/dev/null | head -1)
         if [[ -n "$active_plan" ]]; then
@@ -197,7 +178,7 @@ print("{}|{}|{}|{}".format(
       fi
 
       # --- Most recent repo session journal ---
-      repo_sessions_dir="$repo_root/docs/sessions"
+      repo_sessions_dir="$repo_root/$(config_path "sessions")"
       if [[ -d "$repo_sessions_dir" ]]; then
         last_repo_session=$(ls -t "$repo_sessions_dir"/*.md 2>/dev/null | head -1)
         if [[ -n "$last_repo_session" ]]; then
@@ -217,7 +198,7 @@ print("{}|{}|{}|{}".format(
       # lands in the session prompt. The threat is documented but not eliminated:
       # the operator should treat vault content as informational, never instructional.
       kb_block=$(printf '%s\n' "${context_lines[@]}")
-      max_len=4000
+      max_len=$(timeout_val "kb_context_max_chars")
       if [[ ${#kb_block} -gt $max_len ]]; then
         kb_block="${kb_block:0:$max_len}
 
@@ -231,63 +212,47 @@ print("{}|{}|{}|{}".format(
 fi
 
 # ---------------------------------------------------------------------------
-# Part 3 — Write session-context marker (consumed by pre-session-context-gate.sh)
+# Part 2 — Write session-context marker (consumed by pre-session-context-gate.sh)
 # ---------------------------------------------------------------------------
 # Date-scoped: one marker per UTC day. The gate blocks Edit/Write/Bash until
 # this marker exists, ensuring context-engineering ran before any work starts.
 if [[ -n "$repo_root" ]]; then
   marker_dir="$repo_root/.claude"
   mkdir -p "$marker_dir" 2>/dev/null
-  touch "$marker_dir/.session-context-loaded-$(date -u +%Y-%m-%d)" 2>/dev/null
+  touch "$marker_dir/$(marker_name "session_context")$(date -u +%Y-%m-%d)" 2>/dev/null
 fi
 
 # ---------------------------------------------------------------------------
-# Part 4 — Assemble the final message and emit JSON
+# Part 3 — Assemble the final message and emit JSON
 # ---------------------------------------------------------------------------
-# The message combines the meta-skill content and the KB context block.
 # We use jq to build the JSON so that special characters (quotes, backslashes,
-# newlines) in both components are safely escaped.
+# newlines) in the KB block are safely escaped.
+
+if [[ -z "$kb_block" ]]; then
+  echo '{"priority": "INFO", "message": "agent-skills session started (no KB context available)."}'
+  exit 0
+fi
 
 if command -v jq >/dev/null 2>&1; then
-  final_message=$(jq -n \
-    --arg meta "$meta_content" \
-    --arg kb "$kb_block" \
-    '($meta) + (if $kb != "" then "\n\n---\n\n" + $kb else "" end)' \
-    2>/dev/null)
-  # jq -n outputs a quoted JSON string; we embed it directly in the output object.
+  final_message=$(jq -n --arg kb "$kb_block" '$kb' 2>/dev/null)
   if [[ -n "$final_message" ]]; then
     echo "{\"priority\": \"IMPORTANT\", \"message\": $final_message}"
   else
-    # jq failed for some reason — fall back to meta-skill only, plain output.
     echo '{"priority": "IMPORTANT", "message": "agent-skills loaded (KB context unavailable — jq assembly failed)."}'
   fi
-else
-  # No jq: emit a minimal valid response so the session is not broken.
-  if [[ -n "$meta_content" ]]; then
-    # python3 can safely encode the JSON string. We pass values via environment
-    # variables (NEVER via string interpolation in -c) to avoid code-injection
-    # vectors when vault content contains quotes/backticks/triple-quotes.
-    if command -v python3 >/dev/null 2>&1; then
-      final_message=$(KB_META_PATH="$META_SKILL" KB_BLOCK="$kb_block" python3 -c '
-import json, os, sys
-meta_path = os.environ.get("KB_META_PATH", "")
-kb        = os.environ.get("KB_BLOCK", "")
-try:
-    meta = open(meta_path).read() if meta_path and os.path.isfile(meta_path) else ""
-except Exception:
-    meta = ""
-msg  = meta + ("\n\n---\n\n" + kb if kb else "")
-print(json.dumps(msg))
+elif command -v python3 >/dev/null 2>&1; then
+  # python3 can safely encode the JSON string. We pass the value via environment
+  # variable (NEVER via string interpolation in -c) to avoid code-injection
+  # vectors when vault content contains quotes/backticks/triple-quotes.
+  final_message=$(KB_BLOCK="$kb_block" python3 -c '
+import json, os
+print(json.dumps(os.environ.get("KB_BLOCK", "")))
 ' 2>/dev/null)
-      if [[ -n "$final_message" ]]; then
-        echo "{\"priority\": \"IMPORTANT\", \"message\": $final_message}"
-      else
-        echo '{"priority": "IMPORTANT", "message": "agent-skills loaded (KB context unavailable)."}'
-      fi
-    else
-      echo '{"priority": "IMPORTANT", "message": "agent-skills loaded (jq and python3 unavailable; KB context skipped)."}'
-    fi
+  if [[ -n "$final_message" ]]; then
+    echo "{\"priority\": \"IMPORTANT\", \"message\": $final_message}"
   else
-    echo '{"priority": "INFO", "message": "agent-skills: using-agent-skills meta-skill not found. Skills may still be available individually."}'
+    echo '{"priority": "IMPORTANT", "message": "agent-skills loaded (KB context unavailable)."}'
   fi
+else
+  echo '{"priority": "IMPORTANT", "message": "agent-skills loaded (jq and python3 unavailable; KB context skipped)."}'
 fi

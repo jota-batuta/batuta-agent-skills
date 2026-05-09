@@ -2,6 +2,32 @@
 
 All notable changes to this plugin are listed here.
 
+## [6.0.0] — 2026-05-09
+
+Production-grade refactor. Breaking: skills consolidated, hooks refactored, config externalized.
+
+### Breaking changes
+- **Skills 48 → 24.** Deleted 7 skills that restate Claude's native behavior (context-engineering, git-workflow-and-versioning, quality-axes, ci-cd-and-automation, shipping-and-launch, spec-driven-development, using-agent-skills). Simplified 16 skills to constraints-only (no tutorials).
+- **Hooks 15 → 12.** Deleted clear-intent-marker.sh, post-edit-citation-warn.sh, pre-task-routing-gate.sh.
+- **Rule deleted:** code-style.md (contradicts Claude Code system prompt).
+- **Intent protocol simplified** (Option B): markers kept, JSON schema/docs-intents persistence removed.
+
+### New
+- **`hooks/plugin-config.json`** — single source of truth for all configurable values (markers, timeouts, paths, exempt lists, bypass env vars, audit thresholds).
+- **`hooks/lib.sh`** — shared library sourced by all 12 hooks. Zero hard-coded values in hook logic.
+- **Audit chain thresholds** — ≤20 LOC skip, 21-50 LOC lite (code-reviewer only), >50 LOC full chain. Configurable in plugin-config.json.
+- **Hard-code detector** in validate-plugin.sh — scans hooks for literal values that belong in config.
+- **`rules/core/session-context-gate.md`** and **`rules/authoring/feature-init-required.md`** — document the hooks that enforce them.
+- **`docs/AUDIT_CHAIN.md`** — operator-facing one-pager explaining when/how auditors run.
+- 8 new SKILL.eval.yaml files for hot-path skills (46% eval coverage, up from 10%).
+
+### Fixed
+- validate-plugin.sh no longer fails in the plugin repo (kb-config.json is consumer-project-only).
+- Orphaned references linked to their parent skills.
+- 4 audit-chain agents simplified to ~20 lines each (role + output format, no methodology tutorials).
+- 4 rules simplified to constraints-only (no Claude-native advice).
+- All commands updated to reference surviving skills only.
+
 ## [5.0.0] — 2026-05-09
 
 Stable Claude Code plugin baseline v5.0 — final audit green, full KB command support, deprecation closure.

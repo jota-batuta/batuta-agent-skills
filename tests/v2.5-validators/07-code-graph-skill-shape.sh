@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # 07-code-graph-skill-shape.sh
-# Validates the code-graph deprecation state (v4.1) and full removal (WP1 baseline v4.8).
-# (graphify deprecated ADR-0013 in v4.0; skill deprecated + Step 0.5 removed in v4.1; stubs removed in WP1 of plugin-baseline.)
-# When SKILL/RULE/SLASH missing: treated as PASS (deprecation complete, removal per baseline plan).
-# Otherwise validates deprecated frontmatter etc. Scripts + ADR always checked.
+# Validates the code-graph full removal (v5.0 stable baseline).
+# Operator decision: codebase-memory-mcp no longer used. All code-graph tooling
+# (skills, rules, slash commands, bootstrap scripts) was removed.
+# ADR-0007 is preserved for historical record.
+# Contract updated in v6.0 to verify deletion is complete.
 
 set -uo pipefail
 
@@ -23,153 +24,46 @@ failed=0
 
 ok()   { echo "  OK   $1"; }
 miss() { echo "  MISS $1"; failed=1; }
-drift(){ echo "  DRIFT $1"; failed=1; }
 
-# --- (a) SKILL.md: if removed (post-WP1 baseline), PASS as deprecation complete; else validate deprecated state ---
+# --- (a) SKILL.md must be removed (deprecation complete) ---
 if [[ ! -f "$SKILL" ]]; then
-  ok "skills/code-graph/SKILL.md removed (WP1 baseline; deprecation complete per ADR-0007/0013)"
+  ok "skills/code-graph/SKILL.md removed (deprecation complete per ADR-0007/0013)"
 else
-  grep -qE '^name: code-graph$'               "$SKILL" && ok "SKILL.md frontmatter name: code-graph"             || miss "SKILL.md frontmatter name: code-graph"
-  grep -qE '^description: '                   "$SKILL" && ok "SKILL.md frontmatter description present"          || miss "SKILL.md frontmatter description present"
-  grep -qE '^deprecated: true$'               "$SKILL" && ok "SKILL.md deprecated: true (v4.1)"                  || miss "SKILL.md must have deprecated: true in frontmatter (v4.1)"
-  grep -qE '^## Replacements$'                "$SKILL" && ok "SKILL.md ## Replacements section present"          || miss "SKILL.md ## Replacements section missing (required for deprecated skills)"
-  grep -qE 'codebase-flow-mapper'             "$SKILL" && ok "SKILL.md references codebase-flow-mapper as replacement" || miss "SKILL.md must reference codebase-flow-mapper as replacement"
-
-  # --- (b) graphify claude install must only appear in negative/prohibitive context ---
-  # Find every line mentioning 'graphify claude install' and assert each is on a line
-  # that ALSO contains a prohibition keyword.
-  bad_lines=$(grep -nE 'graphify claude install' "$SKILL" \
-              | grep -ivE 'forbidden|never|do not|don.t|block|kill[- ]?switch|red flag|prohibit|refuse|MUST NOT' \
-              || true)
-  if [[ -z "$bad_lines" ]]; then
-    ok "SKILL.md mentions of 'graphify claude install' are all in prohibitive context"
-  else
-    drift "SKILL.md contains 'graphify claude install' as a positive instruction:"
-    echo "$bad_lines" | sed 's/^/        /'
-  fi
-
-  # --- (c) codebase-memory-mcp must appear in historical context (## History) ---
-  grep -qE 'codebase-memory(-mcp)?' "$SKILL" \
-    && ok "SKILL.md references codebase-memory-mcp in history section" \
-    || miss "SKILL.md should reference codebase-memory-mcp for ADR traceability (## History)"
+  miss "skills/code-graph/SKILL.md should be removed (operator decision: codebase-memory-mcp no longer used)"
 fi
 
-# --- (d) integrations rule: if removed (post-WP1), PASS; else validate deprecated state ---
+# --- (b) integrations rule must be removed ---
 if [[ ! -f "$RULE" ]]; then
-  ok "rules/integrations/code-graph-usage.md removed (WP1 baseline; deprecation complete)"
+  ok "rules/integrations/code-graph-usage.md removed (deprecation complete)"
 else
-  grep -qE '^title: '                  "$RULE" && ok "rule frontmatter title"                      || miss "rule frontmatter title"
-  grep -qE '^applies-to: '             "$RULE" && ok "rule frontmatter applies-to"                 || miss "rule frontmatter applies-to"
-  grep -qE '^last-reviewed: '          "$RULE" && ok "rule frontmatter last-reviewed"              || miss "rule frontmatter last-reviewed"
-  grep -qE '^deprecated: true$'        "$RULE" && ok "rule deprecated: true (v4.1)"                || miss "rule must have deprecated: true in frontmatter (v4.1)"
-  grep -qE '^## Inviolable rules$'     "$RULE" && ok "rule ## Inviolable rules (historical)"       || miss "rule ## Inviolable rules (preserved for history)"
-  grep -qE '^## Anti-patterns$'        "$RULE" && ok "rule ## Anti-patterns (historical)"          || miss "rule ## Anti-patterns (mandatory per §A.4, preserved for history)"
-  # The rule must explicitly forbid graphify claude install.
-  grep -qE 'graphify claude install' "$RULE" \
-    && ok "rule names 'graphify claude install' (as forbidden)" \
-    || miss "rule must name 'graphify claude install' to make the prohibition searchable"
+  miss "rules/integrations/code-graph-usage.md should be removed"
 fi
 
-# --- (e) ADR-0007 ---
-[[ -f "$ADR" ]] && ok "docs/adr/0007-code-graph-dual-engine.md exists" || miss "docs/adr/0007-code-graph-dual-engine.md missing"
-
-# --- (f) bootstrap scripts ---
-if [[ ! -f "$SETUP" ]]; then
-  miss "tools/setup-code-graph.sh missing"
+# --- (c) ADR-0007 must still exist (historical record) ---
+if [[ -f "$ADR" ]]; then
+  ok "docs/adr/0007-code-graph-dual-engine.md exists (historical record preserved)"
 else
-  [[ -x "$SETUP" ]] && ok "setup-code-graph.sh is executable" || miss "setup-code-graph.sh not executable (chmod +x)"
-  # Must NOT write to .claude/settings*.json — that path is on the kill-switch.
-  if grep -qE '\.claude/settings[^"]*\.json' "$SETUP" \
-      && ! grep -qiE '#.*settings\*\.json|MUST NOT|never|kill-switch' "$SETUP"; then
-    drift "setup-code-graph.sh references .claude/settings.json without a comment marking it as forbidden"
-  else
-    ok "setup-code-graph.sh does not write to .claude/settings*.json"
-  fi
-  # Must NOT invoke 'graphify claude install'
-  if grep -qE 'graphify[[:space:]]+claude[[:space:]]+install' "$SETUP"; then
-    drift "setup-code-graph.sh invokes 'graphify claude install' (forbidden)"
-  else
-    ok "setup-code-graph.sh does not invoke 'graphify claude install'"
-  fi
+  miss "docs/adr/0007-code-graph-dual-engine.md missing (must be preserved for history)"
+fi
 
-  # v2.9 supply-chain hardening (M1 from GATE 3 audit closure):
-  # codebase-memory-mcp must be release-pinned and SHA-256-verified.
-  # (graphify pin removed in v4.0 — ADR-0013.)
-
-  # Pin variables present
-  grep -qE '^CBM_PIN_TAG=' "$SETUP" \
-    && ok "setup-code-graph.sh declares CBM_PIN_TAG" \
-    || miss "setup-code-graph.sh must declare CBM_PIN_TAG (codebase-memory-mcp release tag)"
-
-  # codebase-memory-mcp must download release asset, NOT main-branch install.sh
-  if grep -qE 'raw\.githubusercontent\.com/DeusData/codebase-memory-mcp/main/' "$SETUP"; then
-    drift "setup-code-graph.sh fetches codebase-memory-mcp from raw.githubusercontent main branch (must use release-pinned URL)"
-  else
-    ok "setup-code-graph.sh does not fetch codebase-memory-mcp from main branch"
-  fi
-  grep -qE 'github\.com/DeusData/codebase-memory-mcp/releases/download' "$SETUP" \
-    && ok "setup-code-graph.sh uses GitHub Release download URL for codebase-memory-mcp" \
-    || miss "setup-code-graph.sh must download codebase-memory-mcp from /releases/download/"
-
-  # SHA-256 verification block
-  grep -qE 'checksums\.txt' "$SETUP" \
-    && ok "setup-code-graph.sh references checksums.txt" \
-    || miss "setup-code-graph.sh must download and use checksums.txt"
-  grep -qE 'sha256_of|sha256sum|SHA-?256' "$SETUP" \
-    && ok "setup-code-graph.sh has SHA-256 verification logic" \
-    || miss "setup-code-graph.sh must verify SHA-256 of downloaded asset"
-  # The verify must abort on mismatch (BROKEN status). Allow up to 6 lines after
-  # the mismatch message for additional err() lines before the status set.
-  if grep -A6 'SHA-256 mismatch' "$SETUP" | grep -qE 'CBM_STATUS="BROKEN"'; then
-    ok "SHA-256 mismatch correctly aborts install with BROKEN status"
-  else
-    miss "SHA-256 mismatch must mark CBM_STATUS=BROKEN and return"
-  fi
-
-  # v3.1 hardening — gh attestation verify + graceful degrade
-  grep -qE 'gh attestation verify' "$SETUP" \
-    && ok "setup-code-graph.sh invokes 'gh attestation verify'" \
-    || miss "setup-code-graph.sh must invoke 'gh attestation verify' (v3.1)"
-  grep -qE 'gh auth status' "$SETUP" \
-    && ok "setup-code-graph.sh probes 'gh auth status' before attestation verify" \
-    || miss "setup-code-graph.sh must probe 'gh auth status' (graceful degrade)"
-  # Attestation verify must hard-abort on failure (CBM_STATUS=BROKEN within 6 lines).
-  if grep -A6 'attestation verification failed' "$SETUP" | grep -qE 'CBM_STATUS="BROKEN"'; then
-    ok "attestation verify failure aborts install with BROKEN status"
-  else
-    miss "attestation verify failure must mark CBM_STATUS=BROKEN and return"
-  fi
-  # When gh is missing, the script must warn (not abort) so the SHA-256 alone
-  # gate still ships the binary. This is the graceful-degrade contract.
-  if grep -qE 'gh CLI not installed; skipping attestation' "$SETUP"; then
-    ok "setup-code-graph.sh warns + continues when gh CLI is missing (graceful)"
-  else
-    miss "setup-code-graph.sh must warn + continue when gh CLI is missing (graceful degrade)"
-  fi
-  if grep -qE 'gh CLI present but not authenticated' "$SETUP"; then
-    ok "setup-code-graph.sh warns + continues when gh is unauthenticated (graceful)"
-  else
-    miss "setup-code-graph.sh must warn + continue when gh is not authenticated"
-  fi
+# --- (d) bootstrap scripts must be removed (intentional deletion) ---
+if [[ ! -f "$SETUP" ]]; then
+  ok "tools/setup-code-graph.sh removed (intentional deletion — codebase-memory-mcp no longer used)"
+else
+  miss "tools/setup-code-graph.sh should be removed (operator decision: codebase-memory-mcp no longer used)"
 fi
 
 if [[ ! -f "$CHECK" ]]; then
-  miss "tools/check-code-graph-engines.sh missing"
+  ok "tools/check-code-graph-engines.sh removed (intentional deletion)"
 else
-  [[ -x "$CHECK" ]] && ok "check-code-graph-engines.sh is executable" || miss "check-code-graph-engines.sh not executable"
+  miss "tools/check-code-graph-engines.sh should be removed"
 fi
 
-# --- (g) slash command: if removed (post-WP1), PASS; else validate ---
+# --- (e) slash command must be removed ---
 if [[ ! -f "$SLASH" ]]; then
-  ok ".claude/commands/code-graph.md removed (WP1 baseline; deprecation complete)"
+  ok ".claude/commands/code-graph.md removed (deprecation complete)"
 else
-  grep -qE '^description: ' "$SLASH" && ok "slash frontmatter description present" || miss "slash frontmatter description"
-  # Slash must also NOT positively reference graphify claude install
-  bad_slash=$(grep -nE 'graphify claude install' "$SLASH" \
-              | grep -ivE 'forbidden|never|do not|don.t|block|kill[- ]?switch|red flag|prohibit|refuse|MUST NOT' \
-              || true)
-  [[ -z "$bad_slash" ]] && ok "slash mentions of 'graphify claude install' are prohibitive only" \
-    || { drift "slash contains 'graphify claude install' positively:"; echo "$bad_slash" | sed 's/^/        /'; }
+  miss ".claude/commands/code-graph.md should be removed"
 fi
 
 if [[ ${failed} -eq 0 ]]; then

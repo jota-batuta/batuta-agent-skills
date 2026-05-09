@@ -5,14 +5,13 @@
 # already exist (creation, not edit) AND the target sits inside the
 # batuta-agent-skills plugin repository AND no fresh authoring marker is found.
 #
-# Marker contract: `${CLAUDE_PLUGIN_ROOT}/.claude/.authoring-marker-skill-<ISO>`
+# Marker contract: `${CLAUDE_PLUGIN_ROOT}/.claude/<authoring_skill>-<ISO>`
 #   - Written by `skills/batuta-skill-authoring` Step 4 (post-v3.8 SKILL.md).
-#   - Valid for 60 minutes. Older markers are ignored.
+#   - Valid for authoring_marker_ttl_minutes (from config). Older markers are ignored.
 #   - File `touch`-style mtime is the truth, not the filename ISO suffix —
 #     `find` checks mtime so a stale marker with a fresh filename does not pass.
 #
-# Bypass: BATUTA_SKILL_AUTHORING_BYPASS=1 (operator-side env var, set on the
-# shell launching Claude Code). Cannot be set from inside an agent's tool call.
+# Bypass: env var configured in plugin-config.json → bypass_env_vars.skill_authoring
 #
 # Output protocol:
 #   exit 0 → allow the tool call
@@ -21,6 +20,9 @@
 # Source: https://code.claude.com/docs/en/hooks (verified 2026-04-29, Claude Code 1.x)
 
 set -uo pipefail
+
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
 
 input=$(cat)
 
@@ -41,13 +43,11 @@ fi
 # Defensive normalization (handles Windows-shaped paths).
 file_path="${file_path//\\//}"
 
-# Path-traversal guard: refuse paths where ".." appears as a path SEGMENT.
-case "$file_path" in
-  ../*|*/..|*/../*|..)
-    echo "pre-write-skill-gate.sh: path contains '..' as a segment. Refusing." >&2
-    exit 2
-    ;;
-esac
+# Path-traversal guard via lib.sh.
+if has_path_traversal "$file_path"; then
+  echo "pre-write-skill-gate.sh: path contains '..' as a segment. Refusing." >&2
+  exit 2
+fi
 
 # Match scope: only **/skills/**/SKILL.md, excluding the vendored mirror.
 case "$file_path" in
@@ -68,27 +68,8 @@ if [[ -e "$file_path" ]]; then
   exit 0
 fi
 
-# Resolve the plugin root from the target path. Walk up looking for
-# `.claude-plugin/` (the marker for a Claude Code plugin repo). Fall back to
-# the env var ${CLAUDE_PLUGIN_ROOT} if walking up does not find it (e.g. when
-# the file is being created in a fresh layout).
-plugin_root=""
-search_dir="$(dirname "$file_path")"
-for _ in 1 2 3 4 5 6 7 8; do
-  if [[ -d "$search_dir/.claude-plugin" ]]; then
-    plugin_root="$search_dir"
-    break
-  fi
-  parent="$(dirname "$search_dir")"
-  if [[ "$parent" == "$search_dir" ]]; then
-    break
-  fi
-  search_dir="$parent"
-done
-
-if [[ -z "$plugin_root" && -n "${CLAUDE_PLUGIN_ROOT:-}" ]]; then
-  plugin_root="${CLAUDE_PLUGIN_ROOT//\\//}"
-fi
+# Resolve the plugin root via lib.sh.
+plugin_root=$(resolve_plugin_root "$(dirname "$file_path")")
 
 # If we still cannot find the plugin root, the file is being written somewhere
 # outside a plugin repo — out of scope for this gate.
@@ -97,11 +78,12 @@ if [[ -z "$plugin_root" ]]; then
 fi
 
 # Repo-scope guard: only enforce when the plugin's git origin matches the
-# batuta-agent-skills repo. Editing SKILL.md in any other plugin (forks,
+# configured repo pattern. Editing SKILL.md in any other plugin (forks,
 # unrelated marketplaces) is out of scope for this rule.
 origin=$(git -C "$plugin_root" remote get-url origin 2>/dev/null || echo "")
+pattern=$(repo_pattern)
 case "$origin" in
-  *batuta-agent-skills*|*batuta-agent-skills.git*)
+  *${pattern}*|*${pattern}.git*)
     : # in scope
     ;;
   *)
@@ -109,30 +91,26 @@ case "$origin" in
     ;;
 esac
 
-# Operator-side bypass.
-if [[ "${BATUTA_SKILL_AUTHORING_BYPASS:-0}" == "1" ]]; then
-  echo "pre-write-skill-gate.sh: BATUTA_SKILL_AUTHORING_BYPASS=1 — allowing creation of $file_path" >&2
+# Operator-side bypass via lib.sh.
+if is_bypassed "skill_authoring"; then
+  echo "pre-write-skill-gate.sh: $(cfg ".bypass_env_vars.skill_authoring")=1 — allowing creation of $file_path" >&2
   mkdir -p "$plugin_root/.claude" 2>/dev/null
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS skill-gate file=$file_path" >> "$plugin_root/.claude/kb-debug.log" 2>/dev/null
+  _log "BYPASS skill-gate file=$file_path"
   exit 0
 fi
 
-# Look for a marker file less than 60 minutes old.
+# Look for a fresh marker via lib.sh (reads TTL from config).
 marker_dir="$plugin_root/.claude"
-fresh_marker=""
-if [[ -d "$marker_dir" ]]; then
-  fresh_marker=$(find "$marker_dir" -maxdepth 1 -name '.authoring-marker-skill-*' -mmin -60 -print -quit 2>/dev/null)
-fi
-
-if [[ -n "$fresh_marker" ]]; then
+if [[ -d "$marker_dir" ]] && find_fresh_marker "$marker_dir" "authoring_skill"; then
   exit 0
 fi
 
+ttl=$(timeout_val "authoring_marker_ttl_minutes")
 cat >&2 <<EOF
 RULE violated (skill-authoring gate, v3.8): cannot create new SKILL.md at:
   $file_path
 
-No fresh authoring marker found at $marker_dir/.authoring-marker-skill-* (markers expire after 60 minutes).
+No fresh authoring marker found at $marker_dir/$(marker_name "authoring_skill")* (markers expire after ${ttl} minutes).
 
 Required workflow before creating a SKILL.md:
 
@@ -144,7 +122,7 @@ Required workflow before creating a SKILL.md:
 To bypass for legitimate cosmetic edits during a rebase, restart Claude Code
 with the operator-side env var:
 
-  BATUTA_SKILL_AUTHORING_BYPASS=1 claude
+  $(cfg ".bypass_env_vars.skill_authoring")=1 claude
 
 Full rule: $plugin_root/rules/authoring/skill-authoring-required.md
 EOF

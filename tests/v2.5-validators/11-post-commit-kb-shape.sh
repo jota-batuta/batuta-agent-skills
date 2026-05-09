@@ -72,7 +72,7 @@ check "post-commit-kb is NOT registered in hooks.json (it's a git hook, not a Cl
 
 # batuta-project-hygiene installs the hook (step 4c).
 check "batuta-project-hygiene SKILL.md mentions post-commit-kb installation" "grep -q 'post-commit-kb' skills/batuta-project-hygiene/SKILL.md"
-check "batuta-project-hygiene has step 4c" "grep -qE '^4c\.|^### 4c\.' skills/batuta-project-hygiene/SKILL.md"
+check "batuta-project-hygiene has KB Hook Installation section" "grep -qE '^## KB Hook Installation|step 4c' skills/batuta-project-hygiene/SKILL.md"
 
 if [[ $fail -gt 0 ]]; then
   echo "[11-post-commit-kb-shape] FAIL — $fail check(s) failed, $pass passed"

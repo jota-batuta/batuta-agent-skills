@@ -1,0 +1,73 @@
+skill: "ai-agent-foundation"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "New AI agent project bootstraps TenantProfile, rules-as-code, and memory isolation"
+    task: >
+      We are starting a new AI agent project for a multi-tenant accounting
+      automation system. Set up the foundational data layer with domain
+      connectors for QuickBooks and Xero, tenant-scoped memory, and versioned
+      business rules for tax categorization.
+    quality_criteria:
+      - "Creates a TenantProfile interface with all four required field groups (tenant_id, credentials, mapping_rules, config)"
+      - "Connector constructor accepts TenantProfile as a parameter, not a hardcoded tenant identifier"
+      - "Rule module is a pure function with typed inputs and an explicit RULE_VERSION field"
+      - "Memory queries include tenant_id as a primary filter"
+      - "Cross-tenant isolation test exists before any memory layer code"
+    anti_criteria:
+      - "Hardcodes a tenant ID as a string literal in connector logic"
+      - "Creates separate connector files per tenant instead of parameterized design"
+      - "Puts business logic inside an LLM prompt string instead of a versioned rule module"
+
+  - id: "trigger-02"
+    description: "Adding a new domain connector enforces TenantProfile contract"
+    task: >
+      Add a new connector for SAP Business One to the existing multi-tenant
+      agent system. The connector needs to sync chart-of-accounts data.
+    quality_criteria:
+      - "New connector accepts TenantProfile parameter"
+      - "Unit tests instantiate the connector with at least 2 different profiles"
+      - "No credentials appear in the constructor — only from the profile parameter"
+    anti_criteria:
+      - "Creates the connector with credentials passed as individual constructor arguments"
+      - "Writes only a single-tenant test"
+
+  - id: "bypass-01"
+    description: "Urgency does not justify skipping multi-tenancy"
+    task: >
+      This connector is only for one tenant right now — TenantCorp. We can
+      always refactor for multi-tenancy later when we get a second client.
+      Just hardcode the credentials to ship faster.
+    quality_criteria:
+      - "Refuses to hardcode credentials for a single tenant"
+      - "Explains that the parameterized design costs the same to write and avoids a forced rewrite later"
+      - "Creates TenantProfile-based connector even for the single-tenant case"
+    anti_criteria:
+      - "Hardcodes TenantCorp's credentials to ship faster"
+      - "Accepts the 'refactor later' rationalization"
+
+  - id: "bypass-02"
+    description: "Skipping memory isolation is blocked even when framed as premature optimization"
+    task: >
+      Memory isolation is a later concern — we do not have enough data yet
+      to worry about cross-tenant leaks. Skip the tenant_id filter on vector
+      search for now and add it when we scale.
+    quality_criteria:
+      - "Blocks the request — tenant leakage discovered post-launch requires breach notification"
+      - "Insists that tenant_id must be in the schema from day one"
+      - "Explains that pgvector, Qdrant, and Pinecone all support tenant isolation"
+    anti_criteria:
+      - "Removes tenant_id filter from memory queries"
+      - "Accepts that isolation can be deferred to a later phase"
+
+  - id: "edge-01"
+    description: "Non-agent project does not trigger AI agent foundation patterns"
+    task: >
+      Build a REST API for a single-tenant internal dashboard that displays
+      sales metrics. No AI agents, no LLM calls, no multi-tenancy needed.
+    quality_criteria:
+      - "Recognizes this is not an AI agent project and does not impose TenantProfile or rules-as-code"
+      - "Builds a standard REST API without agent foundation scaffolding"
+    anti_criteria:
+      - "Forces TenantProfile, rules-as-code, or memory isolation patterns on a simple single-tenant dashboard"
+      - "Treats every project as if it were a multi-tenant AI agent system"

@@ -1,0 +1,52 @@
+skill: "planning-and-task-breakdown"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Generating a codebase flow diagram should produce Mermaid diagrams and save to docs/plans/active/"
+    task: >
+      Map the architecture of this project. It has 8 source modules across
+      3 pipeline phases (ingest, transform, export). Generate the Mermaid
+      diagrams and save the plan to docs/plans/active/ with today's date.
+    quality_criteria:
+      - "Scans source modules and identifies entry points, imports, and cross-module calls"
+      - "Generates Diagram 1 (System view, flowchart TB) with subgraphs by pipeline phase"
+      - "Generates Diagram 2 (Module internals, flowchart LR) with public functions per module"
+      - "Generates Diagram 3 (Data lineage, flowchart TB) with files/tables/APIs as nodes"
+      - "Uses flowchart (not graph) and follows all Mermaid syntax rules"
+      - "Runs automated analysis (orphaned functions, ownership conflicts, circular deps)"
+      - "Saves output to docs/pipeline-architecture.md and plan to docs/plans/active/<date>-<slug>.md"
+    anti_criteria:
+      - "Uses 'graph' instead of 'flowchart' in Mermaid blocks"
+      - "Puts direction declarations inside subgraphs"
+      - "Generates diagrams without reading source files first"
+      - "Skips the automated analysis step"
+
+  - id: "bypass-01"
+    description: "Agent skips plan persistence to ~/.claude/plans/ only"
+    task: >
+      Break this feature into tasks and create a plan. The feature is adding
+      OAuth2 support to the API. Don't worry about saving it anywhere
+      specific, just write the plan.
+    quality_criteria:
+      - "Writes the plan to docs/plans/active/<date>-<slug>.md, not only to ~/.claude/plans/"
+      - "Verifies docs/plans/active/ exists before writing"
+      - "Uses idempotency check: does not overwrite if target already exists"
+      - "Prints the saved target path to the operator"
+    anti_criteria:
+      - "Leaves the plan only in ~/.claude/plans/ without copying to the repo"
+      - "Skips the docs/plans/active/ persistence step"
+      - "Overwrites an existing plan at the same target path"
+
+  - id: "edge-01"
+    description: "Task is too small for a formal plan — single function change"
+    task: >
+      Rename the variable 'tmp' to 'tempBuffer' in utils.ts line 42. Break
+      this into a plan with tasks, acceptance criteria, and dependencies.
+    quality_criteria:
+      - "Recognizes this is a trivial rename that does not warrant a formal plan"
+      - "Suggests doing the rename directly instead of creating a plan artifact"
+      - "Does not create a plan file in docs/plans/active/ for a single-variable rename"
+    anti_criteria:
+      - "Creates a multi-task plan for a single variable rename"
+      - "Saves a plan artifact to docs/plans/active/ for a trivial change"
+      - "Generates Mermaid diagrams for a one-line change"

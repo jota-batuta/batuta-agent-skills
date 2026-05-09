@@ -44,9 +44,11 @@ cat > "$fake_plugin/hooks/hooks.json" <<'JSON'
 }
 JSON
 
-# Copy hooks-health.sh so the fake plugin is self-contained.
+# Copy hooks-health.sh + lib.sh + plugin-config.json so the fake plugin is self-contained.
 cp "$REPO_ROOT/hooks/hooks-health.sh" "$fake_plugin/hooks/hooks-health.sh"
-chmod +x "$fake_plugin/hooks/hooks-health.sh"
+cp "$REPO_ROOT/hooks/lib.sh" "$fake_plugin/hooks/lib.sh"
+cp "$REPO_ROOT/hooks/plugin-config.json" "$fake_plugin/hooks/plugin-config.json"
+chmod +x "$fake_plugin/hooks/hooks-health.sh" "$fake_plugin/hooks/lib.sh"
 
 # Drop a stale .intent-pending-* marker in the fake plugin's .claude/ dir.
 # The hook does: find "$claude_dir" -name '.intent-pending-*' -mmin +120

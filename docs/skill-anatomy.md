@@ -102,6 +102,61 @@ Create supporting files only when:
 
 Keep patterns and principles inline when under 50 lines.
 
+## SKILL.eval.yaml
+
+Every skill that has reached production use should have a machine-verifiable acceptance test file at `skills/<name>/SKILL.eval.yaml`. This file defines test cases that verify the skill fires correctly, resists rationalization, and stays silent when not applicable.
+
+### When to Write
+
+Write `SKILL.eval.yaml` when:
+- The skill is in the hot path (listed in SKILL_MAP.md Primary Hot Path)
+- The skill guards an authoring gate (skill, agent, rule authoring)
+- The skill has known rationalization patterns that must be tested
+
+### Schema
+
+~~~yaml
+skill: "skill-name"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Description of what is being tested"
+    task: >
+      The task text that prompts the agent.
+    quality_criteria:
+      - "What SUCCESS looks like — verifiable outcome"
+    anti_criteria:
+      - "What FAILURE looks like — violation to watch for"
+~~~
+
+### Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `skill` | string | Name of the skill being evaluated (must match directory name) |
+| `version` | string | Version of the evaluation spec (e.g. "1.0") |
+| `cases` | array | List of test cases |
+| `cases[].id` | string | Unique case identifier following the prefix conventions below |
+| `cases[].description` | string | Human-readable description of the test scenario |
+| `cases[].task` | string | Complete, standalone operator prompt that triggers the scenario |
+| `cases[].quality_criteria` | string[] | Observable outcomes that define success |
+| `cases[].anti_criteria` | string[] | Observable failures that indicate the skill was violated |
+
+### Case ID Conventions
+
+| Prefix | When to use |
+|---|---|
+| `trigger-XX` | Primary trigger — the skill fires and completes correctly |
+| `bypass-XX` | Rationalization attempt — the skill must resist a plausible excuse to skip steps |
+| `edge-XX` | Boundary case — the skill correctly identifies when NOT to fire |
+
+### Writing Principles
+
+- Each `task` is a complete, standalone operator prompt — no shared setup between cases.
+- `quality_criteria` items describe observable outputs ("Runs `npm test` and reports pass/fail") — not internal state.
+- `anti_criteria` items describe observable failures — what a reviewer would see if the skill was violated.
+- Minimum: one `trigger-XX` and one `bypass-XX` case per skill. Add `edge-XX` when the skill has a well-defined "when NOT to use" condition.
+
 ## Writing Principles
 
 1. **Process over knowledge.** Skills are workflows, not reference docs. Steps, not facts.

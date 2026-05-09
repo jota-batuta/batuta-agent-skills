@@ -9,6 +9,10 @@
 set +e
 trap 'exit 0' ERR
 
+# Source shared config library
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
+
 latest=$(ls -t "${HOME}/.claude/plans/"*.md 2>/dev/null | head -1)
 [ -z "$latest" ] && exit 0
 
@@ -23,7 +27,7 @@ slug=$(basename "$latest" .md \
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
 [ -z "$repo_root" ] && exit 0
 
-target_dir="${repo_root}/docs/plans/active"
+target_dir="${repo_root}/$(config_path "plans_active")"
 [ ! -d "$target_dir" ] && exit 0  # batuta-project-hygiene not yet run; skip silently
 
 target="${target_dir}/$(date +%Y-%m-%d)-${slug}.md"

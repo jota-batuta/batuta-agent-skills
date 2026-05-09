@@ -5,7 +5,7 @@
 # marker exists for today's date in the project's .claude/ directory.
 #
 # Marker contract:
-#   `<project-root>/.claude/.session-context-loaded-<YYYY-MM-DD>`
+#   `<project-root>/.claude/<session_context>-<YYYY-MM-DD>`
 #   Written by `session-start.sh` after successful context injection.
 #   Date-scoped: one marker per calendar day (UTC). A new day requires
 #   session-start.sh to re-run.
@@ -14,18 +14,20 @@
 # can manually invoke /context-engineering and write the marker to unblock.
 #
 # Exempt paths for Edit/Write (no marker required):
-#   .claude/**, docs/**, **/CLAUDE.md, **/MEMORY.md, memory/**, .gitignore,
-#   README.md, LICENSE*, plugin.json, ATTRIBUTION.md, CHANGELOG.md
+#   Configured in plugin-config.json → exempt_paths[]
 #
 # Bash has NO exempt list — every Bash tool call is gated.
 #
-# Bypass: BATUTA_CONTEXT_GATE_BYPASS=1 (operator-side env var).
+# Bypass: env var configured in plugin-config.json → bypass_env_vars.session_context
 #
 # Output protocol:
 #   exit 0 → allow
 #   exit 2 → block (stderr shown to model)
 
 set -uo pipefail
+
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$HOOK_DIR/lib.sh"
 
 input=$(cat)
 
@@ -35,9 +37,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # Subagent bypass: subagents inherit session context from the main agent.
-event_name=$(echo "$input" | jq -r '.hook_event_name // empty' 2>/dev/null)
-agent_id=$(echo "$input" | jq -r '.agent_id // empty' 2>/dev/null)
-if [[ "$event_name" == "PreToolUse" && -n "$agent_id" ]]; then
+if is_subagent "$input"; then
   exit 0
 fi
 
@@ -45,29 +45,37 @@ tool_name=$(echo "$input" | jq -r '.tool_name // empty' 2>/dev/null)
 today=$(date -u +%Y-%m-%d)
 
 # ============================================================================
+# Read-only fast-path for Bash — simple read commands bypass the session context gate
+# ============================================================================
+if [[ "$tool_name" == "Bash" ]]; then
+  cmd=$(echo "$input" | jq -r '.tool_input.command // ""' 2>/dev/null)
+  if [[ -n "$cmd" ]] && is_readonly_bash "$cmd"; then
+    exit 0
+  fi
+fi
+
+# ============================================================================
 # Bash branch — all Bash tool calls gated.
 # ============================================================================
 if [[ "$tool_name" == "Bash" ]]; then
-  project_root="${CLAUDE_PROJECT_DIR:-}"
-  if [[ -z "$project_root" ]]; then
-    project_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
-  fi
+  project_root=$(resolve_project_root)
 
   if [[ -z "$project_root" ]]; then
     exit 0
   fi
 
-  if [[ "${BATUTA_CONTEXT_GATE_BYPASS:-0}" == "1" ]]; then
+  if is_bypassed "session_context"; then
     mkdir -p "$project_root/.claude" 2>/dev/null
-    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS context-gate(Bash) cwd=$PWD" >> "$project_root/.claude/kb-debug.log" 2>/dev/null
+    _log "BYPASS context-gate(Bash) cwd=$PWD"
     exit 0
   fi
 
-  marker="$project_root/.claude/.session-context-loaded-$today"
+  marker="$project_root/.claude/$(marker_name "session_context")$today"
   if [[ -f "$marker" ]]; then
     exit 0
   fi
 
+  bypass_var=$(cfg ".bypass_env_vars.session_context")
   cat >&2 <<EOF
 RULE violated (session-context gate, v4.6): cannot execute Bash without session context loaded.
 
@@ -78,9 +86,9 @@ How to unblock:
   Option A (recommended): Restart the session so session-start.sh runs.
   Option B: Invoke /context-engineering, review the injected context, then
             write the marker manually:
-              touch "$project_root/.claude/.session-context-loaded-$today"
+              touch "$project_root/.claude/$(marker_name "session_context")$today"
   Option C: Restart Claude Code with bypass:
-              BATUTA_CONTEXT_GATE_BYPASS=1 claude
+              ${bypass_var}=1 claude
 
 Rule: skills/context-engineering/SKILL.md
 EOF
@@ -97,42 +105,18 @@ fi
 
 file_path="${file_path//\\//}"
 
-case "$file_path" in
-  ../*|*/..|*/../*|..)
-    echo "pre-session-context-gate.sh: path contains '..' as a segment. Refusing." >&2
-    exit 2
-    ;;
-esac
+if has_path_traversal "$file_path"; then
+  echo "pre-session-context-gate.sh: path contains '..' as a segment. Refusing." >&2
+  exit 2
+fi
 
-# EXEMPT PATHS — orchestration artifacts, no marker required
-case "$file_path" in
-  */.claude/*|.claude/*)           exit 0 ;;
-  */docs/*|docs/*)                 exit 0 ;;
-  */CLAUDE.md|CLAUDE.md)           exit 0 ;;
-  */MEMORY.md|MEMORY.md)           exit 0 ;;
-  */memory/*|memory/*)             exit 0 ;;
-  */.gitignore|.gitignore)         exit 0 ;;
-  */README.md|README.md)           exit 0 ;;
-  */LICENSE*|LICENSE*)              exit 0 ;;
-  */plugin.json|plugin.json)       exit 0 ;;
-  */ATTRIBUTION.md|ATTRIBUTION.md) exit 0 ;;
-  */CHANGELOG.md|CHANGELOG.md)     exit 0 ;;
-esac
+# EXEMPT PATHS — orchestration artifacts, no marker required (from config)
+if is_exempt_path "$file_path"; then
+  exit 0
+fi
 
-# Resolve project root
-project_root=""
-search_dir="$(dirname "$file_path")"
-for _ in 1 2 3 4 5 6 7 8 9 10; do
-  if [[ -d "$search_dir/.git" ]]; then
-    project_root="$search_dir"
-    break
-  fi
-  parent="$(dirname "$search_dir")"
-  if [[ "$parent" == "$search_dir" ]]; then
-    break
-  fi
-  search_dir="$parent"
-done
+# Resolve project root via lib.sh (walk up from file_path's directory).
+project_root=$(resolve_project_root "$(dirname "$file_path")")
 
 if [[ -z "$project_root" ]]; then
   project_root=$(git -C "$(dirname "$file_path")" rev-parse --show-toplevel 2>/dev/null || echo "")
@@ -142,18 +126,19 @@ if [[ -z "$project_root" ]]; then
   exit 0
 fi
 
-if [[ "${BATUTA_CONTEXT_GATE_BYPASS:-0}" == "1" ]]; then
-  echo "pre-session-context-gate.sh: BATUTA_CONTEXT_GATE_BYPASS=1 — allowing edit of $file_path" >&2
+if is_bypassed "session_context"; then
+  echo "pre-session-context-gate.sh: $(cfg ".bypass_env_vars.session_context")=1 — allowing edit of $file_path" >&2
   mkdir -p "$project_root/.claude" 2>/dev/null
-  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) BYPASS context-gate(Edit) file=$file_path" >> "$project_root/.claude/kb-debug.log" 2>/dev/null
+  _log "BYPASS context-gate(Edit) file=$file_path"
   exit 0
 fi
 
-marker="$project_root/.claude/.session-context-loaded-$today"
+marker="$project_root/.claude/$(marker_name "session_context")$today"
 if [[ -f "$marker" ]]; then
   exit 0
 fi
 
+bypass_var=$(cfg ".bypass_env_vars.session_context")
 cat >&2 <<EOF
 RULE violated (session-context gate, v4.6): cannot edit implementation file:
   $file_path
@@ -165,9 +150,9 @@ How to unblock:
   Option A (recommended): Restart the session so session-start.sh runs.
   Option B: Invoke /context-engineering, review the injected context, then
             write the marker manually:
-              touch "$project_root/.claude/.session-context-loaded-$(date -u +%Y-%m-%d)"
+              touch "$project_root/.claude/$(marker_name "session_context")$(date -u +%Y-%m-%d)"
   Option C: Restart Claude Code with bypass:
-              BATUTA_CONTEXT_GATE_BYPASS=1 claude
+              ${bypass_var}=1 claude
 
 Rule: skills/context-engineering/SKILL.md
 EOF

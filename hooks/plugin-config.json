@@ -1,0 +1,92 @@
+{
+  "plugin": {
+    "name": "batuta-agent-skills",
+    "repo_pattern": "batuta-agent-skills"
+  },
+
+  "markers": {
+    "intent_pending":    ".intent-pending-",
+    "intent_confirmed":  ".intent-and-routing-confirmed-",
+    "intent_legacy":     ".intent-confirmed-",
+    "session_context":   ".session-context-loaded-",
+    "authoring_skill":   ".authoring-marker-skill-",
+    "authoring_agent":   ".authoring-marker-agent-",
+    "authoring_feature": ".authoring-marker-feature-"
+  },
+
+  "timeouts": {
+    "authoring_marker_ttl_minutes": 60,
+    "stale_marker_warn_minutes": 120,
+    "kb_pipeline_watchdog_seconds": 120,
+    "kb_context_max_chars": 4000
+  },
+
+  "paths": {
+    "plans_active":  "docs/plans/active",
+    "plans_archive": "docs/plans/archive",
+    "sessions":      "docs/sessions",
+    "intents":       "docs/intents",
+    "adrs":          "docs/adr",
+    "kb_config":     ".claude/kb-config.json",
+    "kb_vault_global": ".claude/kb-vault.json"
+  },
+
+  "exempt_paths": [
+    ".claude/*",
+    "docs/*",
+    "CLAUDE.md",
+    "MEMORY.md",
+    "memory/*",
+    ".gitignore",
+    "README.md",
+    "LICENSE*",
+    "plugin.json",
+    "ATTRIBUTION.md",
+    "CHANGELOG.md"
+  ],
+
+  "kill_switch_paths": [
+    ".claude/settings*.json",
+    ".claude/hooks/*",
+    ".claude/agents/*",
+    ".env",
+    ".env.*",
+    "secrets/*"
+  ],
+
+  "bypass_env_vars": {
+    "intent":           "BATUTA_INTENT_BYPASS",
+    "session_context":  "BATUTA_CONTEXT_GATE_BYPASS",
+    "pr_create":        "BATUTA_ALLOW_PR_CREATE",
+    "pr_merge":         "BATUTA_ALLOW_PR_MERGE",
+    "skill_authoring":  "BATUTA_SKILL_AUTHORING_BYPASS",
+    "agent_authoring":  "BATUTA_AGENT_AUTHORING_BYPASS",
+    "feature_init":     "BATUTA_FEATURE_INIT_BYPASS"
+  },
+
+  "models": {
+    "trivial":  "haiku",
+    "standard": "sonnet",
+    "critical": "opus"
+  },
+
+  "intent": {
+    "trivial_max_files": 3,
+    "trivial_max_loc": 20,
+    "trivial_categories": [
+      "typo", "copy", "css", "rename", "comment",
+      "string-literal", "version-bump"
+    ]
+  },
+
+  "description_max_chars": 150,
+
+  "audit": {
+    "skip_threshold_loc": 20,
+    "lite_threshold_loc": 50,
+    "lite_threshold_files": 2,
+    "docs_only_extensions": [".md", ".txt", ".yml", ".yaml"],
+    "full_chain": ["test-engineer", "code-reviewer", "security-auditor"],
+    "lite_chain": ["code-reviewer"]
+  }
+}

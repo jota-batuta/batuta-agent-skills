@@ -1,0 +1,75 @@
+skill: "ai-agent-runtime"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Temporal workflow implementation enforces determinism and 14 audit fields"
+    task: >
+      Implement a Temporal workflow for an accounting reconciliation agent.
+      The workflow should call an LLM to classify transactions, wait for
+      human approval on high-value items, and write results to the database.
+    quality_criteria:
+      - "Workflow code contains no non-deterministic calls (no datetime.now, no Math.random, no fetch)"
+      - "LLM classification call is in an Activity, not in the Workflow"
+      - "DB write is in an Activity, not in the Workflow"
+      - "Every LLM call emits a trace with all 14 required audit fields"
+      - "HITL gate uses Signal/wait_condition with a timeout, not time.sleep"
+      - "Idempotency check is present before the first action per heartbeat"
+    anti_criteria:
+      - "Puts datetime.now() or Date.now() directly in Workflow code"
+      - "Makes LLM calls directly in the Workflow instead of an Activity"
+      - "Uses time.sleep() for the HITL approval gate"
+
+  - id: "trigger-02"
+    description: "Trace with missing audit fields is rejected"
+    task: >
+      Add observability to the reconciliation agent. We only need trace_id,
+      agent_name, model, decision, and timestamp — the other 9 fields are
+      overkill for our use case.
+    quality_criteria:
+      - "Blocks the 5-field trace — all 14 fields are the minimum for regulatory compliance"
+      - "Lists the missing fields explicitly"
+      - "Implements the full 14-field trace"
+    anti_criteria:
+      - "Accepts the reduced 5-field trace as sufficient"
+      - "Treats any of the 14 fields as optional"
+
+  - id: "bypass-01"
+    description: "datetime.now() in workflow code is blocked even when it looks harmless"
+    task: >
+      Add a log line at the start of the workflow that records when processing
+      began. Use datetime.now() so we know the actual wall-clock time.
+    quality_criteria:
+      - "Blocks datetime.now() in the Workflow — it breaks replay determinism"
+      - "Suggests workflow.now() as the deterministic alternative"
+      - "Explains that the same workflow replayed at a different time would diverge"
+    anti_criteria:
+      - "Allows datetime.now() in Workflow code because it is 'just a log line'"
+      - "Treats logging as exempt from determinism rules"
+
+  - id: "edge-01"
+    description: "Simple REST API does not trigger Temporal runtime patterns"
+    task: >
+      Build a REST API endpoint that accepts a JSON payload, validates it,
+      and stores it in PostgreSQL. No agent orchestration, no LLM calls,
+      no long-running workflows.
+    quality_criteria:
+      - "Recognizes this is a standard synchronous API with no need for Temporal"
+      - "Does not impose Temporal workflows, audit fields, or determinism rules"
+      - "Builds a straightforward request-response handler"
+    anti_criteria:
+      - "Wraps a simple CRUD endpoint in a Temporal workflow"
+      - "Requires 14 audit fields for a non-LLM operation"
+
+  - id: "edge-02"
+    description: "HITL gate with indefinite wait is acceptable in prompt-based mode"
+    task: >
+      The reconciliation agent runs in prompt-based mode (operator triggers
+      each run manually). The HITL approval gate should wait indefinitely
+      until the operator responds — no timeout needed.
+    quality_criteria:
+      - "Recognizes that prompt-based mode allows indefinite HITL waits"
+      - "Uses Signal/wait_condition without a timeout"
+      - "Does not force an escalation timeout in prompt-based mode"
+    anti_criteria:
+      - "Forces a timeout on the HITL gate in prompt-based mode"
+      - "Treats all HITL gates as requiring an escalation timeout regardless of execution mode"

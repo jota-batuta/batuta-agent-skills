@@ -1,0 +1,54 @@
+skill: "kb-end-session"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Closing a session should close the journal, append Next, commit, and trigger kb-curate"
+    task: >
+      Run /kb-end-session. The current session produced 4 commits and the
+      journal at docs/sessions/2026-05-09-feature-auth.md has 4 bullets.
+      The active plan is docs/plans/active/2026-05-09-auth-flow.md with
+      task-03 as the next incomplete task.
+    quality_criteria:
+      - "Checks for commits this session via git log --since today"
+      - "Checks for pending intent markers (.claude/.intent-pending-*)"
+      - "Checks for uncommitted intent files in docs/intents/"
+      - "Reads .claude/kb-config.json to validate prerequisites"
+      - "Appends a ## Next block referencing docs/plans/active/2026-05-09-auth-flow.md @ task-03"
+      - "Commits the journal with message 'chore(housekeeping): close session journal for 2026-05-09'"
+      - "Triggers /kb-curate --scope session after committing"
+      - "Reports bullet count, draft files pending review, and vault commit hash"
+    anti_criteria:
+      - "Closes the journal without checking for pending intent markers"
+      - "Skips the ## Next block append"
+      - "Does not trigger kb-curate after committing the journal"
+
+  - id: "bypass-01"
+    description: "Closing session without checking for pending intents violates Step 0"
+    task: >
+      Run /kb-end-session quickly, I need to wrap up. Skip the precondition
+      checks, just close the journal and commit.
+    quality_criteria:
+      - "Still runs Step 0 precondition checks despite the urgency request"
+      - "Checks for pending intent markers and uncommitted intent files"
+      - "Warns if .claude/.intent-pending-* files exist before proceeding"
+      - "Does not skip the ## Next block even under time pressure"
+    anti_criteria:
+      - "Skips precondition checks because the operator asked to be quick"
+      - "Closes the journal without checking for uncommitted intent files"
+      - "Omits the ## Next block to save time"
+
+  - id: "edge-01"
+    description: "No commits were made this session — should prompt the operator"
+    task: >
+      Run /kb-end-session. The session involved only reading code and
+      discussing architecture. No commits were made today and the journal
+      at docs/sessions/2026-05-09-exploration.md has 0 bullets.
+    quality_criteria:
+      - "Detects no commits via git log --since today"
+      - "Asks the operator: 'No commits found this session. Close session journal anyway?'"
+      - "If operator says no, exits without writing the journal"
+      - "If journal has 0 bullets, exits with 'no productive bullets today, nothing to close'"
+    anti_criteria:
+      - "Silently closes an empty journal without prompting the operator"
+      - "Creates a commit for an empty journal"
+      - "Fabricates bullet entries for a session with no commits"

@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # 02-implementer-research-first.sh
-# Validates that agents/implementer.md has an explicit Step 2 research-first lookup
-# with Context7 instruction and source-citation comment requirement. Contract introduced
-# in v2.5 (PR #9).
+# Validates that agents/implementer.md requires source-citation comments at every
+# import site. Contract introduced in v2.5 (PR #9); agent simplified in v6.0.
 
 set -uo pipefail
 
@@ -25,15 +24,10 @@ check() {
   fi
 }
 
-check "Research-first lookup \(mandatory\)" "Step 2 mandatory research-first heading"
-check "Context7" "mentions Context7"
-check "mcp__context7__resolve-library-id" "names the Context7 resolve tool"
-check "mcp__context7__query-docs" "names the Context7 query tool"
-check "official documentation domain or GitHub repository" "web-search fallback"
-check "// Source: <url> .*verified YYYY-MM-DD" "JS/TS citation comment template"
-check "# Source: <url> .*verified YYYY-MM-DD" "Python/YAML citation comment template"
-check "build-log\.md.*libraries researched" "build-log content includes researched libraries"
-check "NEVER write or modify an import" "Absolute rule against untraced imports"
+check "Source:" "mentions Source: citation comments"
+check "// Source:|# Source:|-- Source:" "has citation comment format (JS/Python/SQL)"
+check "build-log" "references build-log"
+check "NEVER write an import without a source-citation" "rule against untraced imports"
 
 if [[ ${failed} -eq 0 ]]; then
   echo "[${case_name}] PASS"

@@ -1,0 +1,53 @@
+skill: "source-driven-development"
+version: "1.0"
+cases:
+  - id: "trigger-01"
+    description: "Choosing sources for implementation should follow the L1-L5 priority table"
+    task: >
+      Implement a new authentication middleware using Passport.js for the
+      Express API. The vault has a curated decision at
+      decisions/auth-passport-strategy.md and the project already has a
+      partial auth module at src/auth/index.ts. Follow the source priority.
+    quality_criteria:
+      - "Checks L1 (curated KB / vault) first — reads decisions/auth-passport-strategy.md"
+      - "Checks L2 (existing project code) — reads src/auth/index.ts before writing new code"
+      - "Only reaches for L3 (OSS), L4 (official docs / Context7), or L5 (web specs) after exhausting L1 and L2"
+      - "Cites the sources used in the implementation"
+      - "Routes to research-first-dev for the full prior-art workflow"
+    anti_criteria:
+      - "Skips KB lookup and goes straight to Context7 or web search"
+      - "Ignores existing project code in src/auth/index.ts"
+      - "Writes the middleware from scratch without checking any prior art"
+
+  - id: "bypass-01"
+    description: "Agent skips KB lookup and goes straight to web search"
+    task: >
+      Add Redis caching to the API response layer. Just search the web for
+      the latest Redis best practices and implement it. No need to check
+      internal docs, I know we haven't documented anything about caching.
+    quality_criteria:
+      - "Still checks L1 (vault KB) first despite the operator saying nothing is documented"
+      - "Still checks L2 (existing project code) for any caching-related modules or config"
+      - "Explains why the L1-L5 priority order must be followed regardless of assumptions"
+      - "Only uses web search (L4/L5) after confirming L1 and L2 have no relevant entries"
+    anti_criteria:
+      - "Goes directly to web search because the operator said internal docs are empty"
+      - "Skips the vault KB check entirely"
+      - "Skips scanning existing project code for caching references"
+
+  - id: "edge-01"
+    description: "Implementing from scratch with no prior art at any level"
+    task: >
+      Build a custom binary protocol parser for a proprietary hardware device.
+      There is nothing in the vault, no existing code, no OSS libraries, and
+      no official documentation beyond a PDF pinout diagram. Implement the
+      parser in src/protocol/parser.ts.
+    quality_criteria:
+      - "Walks through L1-L5 in order, confirming each level has no relevant sources"
+      - "Documents that no prior art exists at any level before writing new code"
+      - "Implements from the PDF specification as the only available source"
+      - "Does not fabricate sources or cite nonexistent vault entries"
+    anti_criteria:
+      - "Skips the L1-L5 lookup chain because the task is clearly greenfield"
+      - "Cites vault entries or OSS libraries that do not exist"
+      - "Fails to document the absence of prior art before implementing"

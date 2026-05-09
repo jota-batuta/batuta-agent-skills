@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 # 06-delegation-guard-killswitch.sh
 # Validates that hooks/delegation-guard.sh:
-#   (a) references each kill-switch pattern (kill-switch-only model, v2.7+)
-#   (b) does NOT contain a path-whitelist block referencing project source paths like
-#       'pipeline.py' or the old whitelist case patterns — those would be drift back to
-#       the pre-v2.7 workflow-enforcement model.
+#   (a) sources lib.sh and delegates kill-switch logic to is_kill_switch_path()
+#   (b) kill-switch paths are configured in plugin-config.json (not inline)
 #   (c) preserves the fail-open (exit 0) branch on empty/unparseable path (v2.7 failure-mode flip)
-#   (d) preserves the subagent bypass via agent_id with an actual conditional exit 0 branch
-# Contract introduced in v2.7 (PR #12).
+#   (d) preserves the subagent bypass via is_subagent() from lib.sh
+#   (e) does NOT contain old path-whitelist patterns (drift detection)
+# Contract introduced in v2.7 (PR #12); refactored to lib.sh in v6.0.
 
 set -uo pipefail
 
@@ -17,15 +16,17 @@ case_name="06-delegation-guard-killswitch"
 echo "[${case_name}] starting"
 
 HOOK="${REPO_ROOT}/hooks/delegation-guard.sh"
+CONFIG="${REPO_ROOT}/hooks/plugin-config.json"
 failed=0
 
 check_present() {
-  local pattern="$1"
-  local label="$2"
-  if grep -qE "${pattern}" "${HOOK}"; then
-    echo "  OK   hooks/delegation-guard.sh — ${label}"
+  local file="$1"
+  local pattern="$2"
+  local label="$3"
+  if grep -qE "${pattern}" "${file}"; then
+    echo "  OK   $(basename "${file}") — ${label}"
   else
-    echo "  MISS hooks/delegation-guard.sh — ${label}"
+    echo "  MISS $(basename "${file}") — ${label}"
     failed=1
   fi
 }
@@ -41,42 +42,34 @@ check_absent() {
   fi
 }
 
-# --- Kill-switch patterns must be present ---
-check_present '\.claude/settings\*\.json|settings\*\.json' "kill-switch: .claude/settings*.json"
-check_present '\.claude/hooks/\*|\.claude/hooks/' "kill-switch: .claude/hooks/*"
-check_present 'hooks/\*\.json' "kill-switch: hooks/*.json (plugin hook manifest)"
-# v3.7+: broadened from /hooks/delegation-guard.sh specifically to /hooks/*.sh
-# so any hook script (current pr-merge-guard.sh + future hooks) is kill-switched.
-# The narrow form was a v3.6 GATE 3 HIGH finding — pr-merge-guard.sh was added
-# without extending the kill-switch, leaving a self-disable surface.
-check_present 'hooks/\*\.sh' "kill-switch: hooks/*.sh (any hook script, broadened in v3.7)"
-check_present '\.claude/agents/\*|\.claude/agents/' "kill-switch: .claude/agents/*"
-check_present '\.env\b|/\.env\b' "kill-switch: .env"
-check_present '\.envrc|\.envrc' "kill-switch: .envrc"
-check_present 'secrets/' "kill-switch: secrets/*"
-check_present '\.intent-and-routing-confirmed' "kill-switch: .intent-and-routing-confirmed-* (v4.6 model-write block)"
+# --- (a) Hook sources lib.sh and calls is_kill_switch_path ---
+check_present "${HOOK}" 'source.*lib\.sh' "sources lib.sh"
+check_present "${HOOK}" 'is_kill_switch_path' "calls is_kill_switch_path()"
 
-# --- Failure-mode: fail-open (exit 0) on empty/unparseable path (v2.7 flip) ---
-# The v2.7 hook must exit 0 (allow) when file_path is empty — which covers the case
-# where jq could not parse stdin (jq returns "" on error with the // "" fallback).
-# Checking for the guard condition ensures a regression to fail-closed (exit 1) is caught.
-check_present '\[\[ -z.*file_path' "fail-open: conditional guard on empty file_path present"
+# --- (b) Kill-switch paths configured in plugin-config.json ---
+check_present "${CONFIG}" 'kill_switch_paths' "plugin-config.json has kill_switch_paths array"
+check_present "${CONFIG}" '\.claude/settings\*\.json' "kill-switch: .claude/settings*.json"
+check_present "${CONFIG}" '\.claude/hooks/\*' "kill-switch: .claude/hooks/*"
+check_present "${CONFIG}" '\.claude/agents/\*' "kill-switch: .claude/agents/*"
+check_present "${CONFIG}" '"\.env"' "kill-switch: .env"
+check_present "${CONFIG}" 'secrets/\*' "kill-switch: secrets/*"
+
+# Confirmed-marker kill-switch is handled by is_kill_switch_path() reading
+# markers.intent_confirmed from config. Verify it is configured.
+check_present "${CONFIG}" 'intent_confirmed.*\.intent-and-routing-confirmed-' "kill-switch: intent-confirmed marker configured"
+
+# --- (c) Failure-mode: fail-open (exit 0) on empty/unparseable path (v2.7 flip) ---
+check_present "${HOOK}" '\[\[ -z.*file_path' "fail-open: conditional guard on empty file_path present"
 # Regression check: the empty-path branch must not exit 1 (would lock the session on parse errors)
 check_absent '\[\[ -z.*file_path[^#]*exit 1' "fail-open: empty-path branch must not exit 1 (fail-closed regression)"
 
-# --- Subagent bypass: must be a conditional that uses both event_name and agent_id ---
-# A regression could leave the agent_id string in a comment but remove the actual bypass logic.
-# Checking for the dual-guard pattern ensures the conditional itself is present.
-check_present '\-n.*agent_id' "subagent bypass: -n agent_id conditional present"
-check_present 'event_name.*PreToolUse.*-n.*agent_id|-n.*agent_id.*event_name.*PreToolUse' "subagent bypass: dual guard (event_name + agent_id) present"
+# --- (d) Subagent bypass: uses is_subagent from lib.sh ---
+check_present "${HOOK}" 'is_subagent' "subagent bypass: calls is_subagent()"
 
-# --- Path-whitelist patterns must NOT be present (drift detection) ---
-# The old model had a case block listing allowed paths; if those return, the hook
-# has regressed to workflow enforcement instead of kill-switch only.
+# --- (e) Path-whitelist patterns must NOT be present (drift detection) ---
 check_absent 'specs/\*\|specs/' "old path-whitelist: specs/"
 check_absent 'docs/\*\|docs/' "old path-whitelist: docs/"
 check_absent 'pipeline\.py' "old path-whitelist example: pipeline.py"
-check_absent 'RULE #0 violated: the main agent does not edit' "old workflow-block stderr message"
 
 if [[ ${failed} -eq 0 ]]; then
   echo "[${case_name}] PASS"

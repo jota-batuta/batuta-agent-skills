@@ -1,73 +1,105 @@
 # Skill Map
 
-This map is the operational consolidation layer for the Claude Code plugin. It
-keeps existing skill names stable while declaring which skills are primary,
-wrappers, specialized workflows, or deprecated historical stubs.
+This map is the operational consolidation layer for the Claude Code plugin.
+It lists the 24 production skills organized by functional category.
 
-## Primary Hot Path
+## Hot Path (9)
 
-| Stage | Primary skill | Notes |
-|---|---|---|
-| Route | `using-agent-skills` | Short router; long examples moved to `references/using-agent-skills-longform.md`. |
-| Confirm | `intent-capture` | Mandatory for concrete work. Owns intent and routing markers. |
-| Context | `context-engineering` | Short context packer; examples moved to `references/context-engineering-playbook.md`. |
-| Prior art | `research-first-dev` | Active prior-art-first workflow; supersedes `source-driven-development`. |
-| Build | `incremental-implementation` | Slice-by-slice implementation. |
-| Verify | `test-driven-development` | Primary verification workflow. |
-| Review | `code-review-and-quality` | Main audit gate before close. |
-| Ship | `git-workflow-and-versioning`, `slice-close` | Git and slice closure. |
+The default build chain — every concrete task walks this sequence.
 
-## Compatibility Wrappers
-
-| Skill | Status | Active replacement |
-|---|---|---|
-| `source-driven-development` | Wrapper | `research-first-dev` |
-| `slice-open` | Lifecycle wrapper | `slice-close` plus active plan conventions |
-| `pr-prep` | Lifecycle wrapper | `slice-close` / PR guard workflow |
-| `kb-end-session` | Lifecycle wrapper | KB lifecycle skills plus session journal rules |
-
-## Specialized Active Skills
-
-| Area | Skills |
+| Skill | Role |
 |---|---|
-| Product/API/UI | `api-and-interface-design`, `frontend-ui-engineering` |
-| Quality axes | `debugging-and-error-recovery`, `security-and-hardening`, `performance-optimization`, `code-simplification` |
-| Delivery | `ci-cd-and-automation`, `shipping-and-launch`, `documentation-and-adrs`, `deprecation-and-migration` |
-| KB | `batuta-kb-vault`, `kb-curate`, `kb-backfill`, `batuta-status`, `vault-health` |
-| Authoring gates | `batuta-skill-authoring`, `batuta-agent-authoring`, `batuta-rule-authoring` |
-| Browser/runtime | `browser-testing-with-devtools` |
-| Architecture diagrams | `codebase-flow-mapper` |
+| `intent-capture` | Tier assignment + grill-if-standard before implementation |
+| `source-driven-development` | Source priority hierarchy for AI-first development |
+| `research-first-dev` | 6-layer harness mandate + citation format |
+| `incremental-implementation` | "NOTICED BUT NOT TOUCHING" scope discipline |
+| `test-driven-development` | Prove-It pattern for bugs |
+| `code-review-and-quality` | Quick/Thorough mode detection + severity prefixes |
+| `slice-close` | Audit chain + PR + session close |
+| `idea-refine` | Variation lenses + "Not Doing" list |
+| `planning-and-task-breakdown` | Codebase flow mapper + plan persistence |
 
-## Deprecated Historical Stubs
+## Authoring Gates (3)
 
-| Skill | Replacement |
+Skills that guard creation of new plugin artifacts. Hooks depend on these names.
+
+| Skill | Scope |
 |---|---|
-| `code-graph` | `codebase-flow-mapper` for diagrams; direct search/read for call-site queries |
+| `batuta-skill-authoring` | Discover-first gate (91k+ catalog) |
+| `batuta-agent-authoring` | Distinctness + tool minimality gate |
+| `batuta-rule-authoring` | Two-project evidence gate |
 
-## Vendored Skills
+## AI Agent Harness (2)
 
-Vendored skills under `skills/_vendored/` are dependencies, not Batuta workflow
-ownership points. Do not edit vendored content in this repo; wrap it from a
-first-party skill when Batuta policy is needed.
+Two consolidated skills covering the 6-layer agent architecture.
 
-## 6-Layer Agent Harness (new in this pass)
+| Skill | Role |
+|---|---|
+| `ai-agent-foundation` | TenantProfile + rules-as-code + memory isolation constraints |
+| `ai-agent-runtime` | 14 audit fields + Temporal determinism + idempotency |
 
-When the operator describes an AI Agent project, `batuta-project-hygiene` scaffolds the 6-layer harness first:
+## KB Pipeline (4)
 
-1. Multi-tenant Connector Pattern
-2. Rules-as-Code Authoring
-3. Memory Architecture Design
-4. Durable Orchestration (Temporal.io)
-5. Observability Contract
-6. Agent Heartbeat & Execution Autonomy
+| Skill | Role |
+|---|---|
+| `batuta-kb-vault` | Obsidian vault 4-level architecture + health check |
+| `kb-backfill` | Legacy repo extraction pipeline |
+| `kb-curate` | L1->L2/L3 promotion with hybrid control |
+| `kb-end-session` | Session journal close + curation trigger |
 
-All new agent work must follow the harness-first order enforced by `research-first-dev`.
+## Delivery (2)
 
-## Consolidation Rules
+| Skill | Role |
+|---|---|
+| `documentation-and-adrs` | Per-slice living docs mandate |
+| `deprecation-and-migration` | Churn Rule + zombie code + 5 questions |
 
-- Keep public skill names for at least one release after changing behavior.
-- Put long examples in `references/`; keep hot path skills under 150 lines.
-- Prefer one primary owner per decision. Wrappers must route quickly instead of
-  duplicating process.
-- Authoring gate skills remain separate because hooks depend on their names.
-- Deprecated skills must name the replacement and preserve ADR traceability.
+## Design (1)
+
+| Skill | Role |
+|---|---|
+| `interface-and-ui-design` | Avoid AI Aesthetic + One-Version Rule + WCAG 2.1 AA |
+
+## Plugin Maintenance (2)
+
+| Skill | Role |
+|---|---|
+| `batuta-project-hygiene` | Feature-init + doc skeleton + KB hooks |
+| `batuta-status` | Cross-project vault/git status + hook diagnosis |
+
+## Specialized (1)
+
+| Skill | Role |
+|---|---|
+| `browser-testing-with-devtools` | DevTools MCP security boundaries + tool catalog |
+
+---
+
+## Deleted Skills (v5.x adjustment)
+
+| Deleted skill | Reason |
+|---|---|
+| `using-agent-skills` | Circular routing table |
+| `context-engineering` | Native Claude behavior |
+| `git-workflow-and-versioning` | Native Claude behavior |
+| `quality-axes` | Training data reformatted |
+| `ci-cd-and-automation` | Generic DevOps |
+| `shipping-and-launch` | Generic DevOps |
+| `spec-driven-development` | Claude Code built-in plan mode |
+
+## Merged Skills (v5.x consolidation)
+
+Skills consolidated during the v5.x refactor:
+
+| Absorbed skill(s) | Merged into |
+|---|---|
+| `rules-import` | `batuta-rule-authoring` |
+| `save-plan`, `codebase-flow-mapper` | `planning-and-task-breakdown` |
+| `vault-health` | `batuta-kb-vault` |
+| `living-docs-maintenance` | `documentation-and-adrs` |
+| `hooks-diagnose` | `batuta-status` |
+| `api-and-interface-design`, `frontend-ui-engineering` | `interface-and-ui-design` |
+| `multi-tenant-connector-pattern`, `rules-as-code-authoring`, `memory-architecture-design` | `ai-agent-foundation` |
+| `durable-orchestration-temporalio`, `observability-contract`, `agent-heartbeat-autonomy` | `ai-agent-runtime` |
+| `debugging-and-error-recovery`, `security-and-hardening`, `performance-optimization`, `code-simplification` | `quality-axes` (then deleted) |
+| `slice-open`, `pr-prep` | Removed (redundant with `slice-close`) |
