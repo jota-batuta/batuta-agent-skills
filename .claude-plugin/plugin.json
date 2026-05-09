@@ -1,7 +1,7 @@
 {
   "name": "batuta-agent-skills",
   "description": "Claude Code plugin for building multi-tenant, AI-first software with prior-art-first workflows, runtime hooks, audit agents, rules, commands, and Obsidian memory.",
-  "version": "4.8.0",
+  "version": "5.0.0",
   "author": {
     "name": "jota-batuta",
     "url": "https://github.com/jota-batuta"

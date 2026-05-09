@@ -2,6 +2,15 @@
 
 All notable changes to this plugin are listed here.
 
+## [5.0.0] — 2026-05-09
+
+Stable Claude Code plugin baseline v5.0 — final audit green, full KB command support, deprecation closure.
+
+- All 15 v2.5 validators + gates + hooks pass (`validate-plugin.sh` exit 0).
+- Final audit: code-graph removal complete, kb-curate/kb-backfill commands added and validated.
+- Version bump 4.8.0 → 5.0.0 (major: stable baseline + command completeness).
+- PR #79 merged: audit fixes landed.
+
 ## [4.8.0] — 2026-05-09
 
 Claude Code-only plugin baseline for building multi-tenant, AI-first software from day zero.
