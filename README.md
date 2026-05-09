@@ -57,7 +57,7 @@ After any implementation, a sequential audit chain runs: `test-engineer` -> `cod
 | `batuta-rule-authoring` | Before new rule file | Validates format + N=2 admission gate |
 | `kb-end-session` | End of session | Closes session journal, triggers curation |
 
-`code-graph` is deprecated in the active baseline. Use `codebase-flow-mapper` for version-controlled architecture diagrams and grep/read for live call-site queries.
+`code-graph` was removed in the 6-layer hardening pass. Use `codebase-flow-mapper` for version-controlled architecture diagrams and grep/read for live call-site queries.
 
 ### Rules
 

@@ -50,6 +50,19 @@ Vendored skills under `skills/_vendored/` are dependencies, not Batuta workflow
 ownership points. Do not edit vendored content in this repo; wrap it from a
 first-party skill when Batuta policy is needed.
 
+## 6-Layer Agent Harness (new in this pass)
+
+When the operator describes an AI Agent project, `batuta-project-hygiene` scaffolds the 6-layer harness first:
+
+1. Multi-tenant Connector Pattern
+2. Rules-as-Code Authoring
+3. Memory Architecture Design
+4. Durable Orchestration (Temporal.io)
+5. Observability Contract
+6. Agent Heartbeat & Execution Autonomy
+
+All new agent work must follow the harness-first order enforced by `research-first-dev`.
+
 ## Consolidation Rules
 
 - Keep public skill names for at least one release after changing behavior.

@@ -2,10 +2,10 @@
 
 > **Read first** (in this order):
 > 1. [`docs/PRD.md`](PRD.md) — vision, problem, success metrics
-> 2. [`docs/SPEC.md`](SPEC.md) — architecture overview (10 layers including code-graph + supply-chain + runtime CI)
+> 2. [`docs/SPEC.md`](SPEC.md) — architecture overview (now includes 6-layer multi-tenant AI Agent harness)
 > 3. [`CLAUDE.md`](../CLAUDE.md) — conventions and session-handoff protocol
 >
-> For **operator recipes** (upgrade, code-graph install, retrofit, CI), see [`docs/usage/`](usage/) — brief, action-oriented guides with copy-pasteable commands.
+> For **operator recipes** (upgrade, retrofit, CI), see [`docs/usage/`](usage/) — brief, action-oriented guides with copy-pasteable commands.
 >
 > This file is the skills-and-agents quick-start that complements the architectural docs above. It is NOT the source of truth for project structure — `docs/SPEC.md` is.
 

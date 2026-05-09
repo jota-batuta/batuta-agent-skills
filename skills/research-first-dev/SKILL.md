@@ -7,18 +7,28 @@ description: Enforces prior-art-first development. Use before building with exte
 
 ## Overview
 
-Research-first means prior-art-first: check whether somebody already solved the
-problem, copy or adapt the proven approach, and invent only when no reliable
-option exists. The output is an evidence pack: source, version/context, chosen
-approach, rejected alternatives, license risk, and verification plan.
+Research-first means harness-first: before choosing any agentic framework
+(LangChain, LangGraph, Anthropic SDK, Google ADK, Pydantic AI, custom, etc.)
+or model, define the complete 6-layer harness for a multi-tenant AI agent.
 
-This skill delegates library lookup mechanics to `skills/_vendored/context7/`.
-For source-driven legacy prompts, route here.
+The 6 layers are:
+1. Multi-tenant Domain Connectors
+2. Rules-as-Code
+3. Memory Architecture
+4. Durable Orchestration (Temporal.io)
+5. Observability (Langfuse + 14 audit fields)
+6. Agent Heartbeat & Execution Autonomy (prompt-based vs autonomous unattended)
+
+Only after the harness is designed do you evaluate frameworks. The harness is
+the durable asset; frameworks and models are replaceable.
+
+This skill enforces that order.
 
 ## When to Use
 
 Trigger before:
 
+- Designing any agentic system (new agent, major refactor, or framework selection).
 - Writing `import`, `require`, `from ... import`, `use`, SDK calls, HTTP API
   calls, or CLI invocations not verified in this session.
 - Adding reusable architecture, adapters, generators, rules, or tenant/context
@@ -30,6 +40,19 @@ Do not use for language built-ins, typo-only edits, or code already cited in the
 same session and version.
 
 ## Process
+
+### Step 0: Define the 6-layer harness first (mandatory for agents)
+
+Before any framework or model discussion:
+
+1. Design Capa 1: Multi-tenant connector pattern (one connector per domain).
+2. Design Capa 2: Rules-as-code (versioned, testable business rules).
+3. Design Capa 3: Memory architecture (tenant-scoped, replayable).
+4. Design Capa 4: Durable orchestration with Temporal.io (workflows, dual-mode, HITL, Event History).
+5. Design Capa 5: Observability contract (Langfuse + 14 fields, confidence, drift, explainability).
+6. Design Capa 6: Agent heartbeat & execution autonomy (prompt-based vs autonomous unattended cron heartbeat).
+
+Only after the harness is documented proceed to framework evaluation. The harness is the durable asset.
 
 ### Step 1: Resolve version and context
 
